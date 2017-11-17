@@ -1,6 +1,7 @@
 import tensorlayer as tl
 import tensorflow as tf
 from tensorlayer.layers import *
+from data_input import DataInput
 
 # ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
 def generator(input, reuse, hidden_number=128, kernel=3):
@@ -142,16 +143,16 @@ def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
 
 #audio_width/height
 #image_width/height
-def train(batch_size, epochs):
+def train(batch_size, epochs, dataset):
+
+    ###========================== DEFINE PIPELINE ============================###
+    images, audio, filename = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs, shuffle=True)
+
 
     ###========================== DEFINE MODEL ============================###
-    t_input_gen = tf.placeholder('float32', [batch_size, audio_width, audio_height, 1 ], name='t_audio_input_generator')
-    t_real_image = tf.placeholder('float32', [batch_size, image_width, image_height, 3], name='t_real_image')
-
-
-    net_gen = generator(input=t_input_gen, reuse=False)
-    net_d_real, d_z_false = discriminator(input=t_real_image, reuse=False)
-    net_d_false, d_z_false = discriminator(input=net_gen.outputs, reuse=False)
+    net_gen = generator(input=audio, reuse=False)
+    net_d_real, d_z_false = discriminator(input=images, reuse=False)
+    net_d_false, d_z_false = discriminator(input=net_gen.outputs, reuse=True)
 
     # ###========================== DEFINE TRAIN OPS ==========================###
 
@@ -180,21 +181,25 @@ def train(batch_size, epochs):
 
     m_global = d_loss_real + tf.abs(balance)
 
+    images, filename = dataset.input_pipeline(batch_size, epochs, shuffle=True)
     session = tf.Session()
+    tl.layers.initialize_global_variables(session)
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(coord=coord)
+
 
     for j in range(0, epochs):
-
-        ###========================= load data =========================###
-
         ###========================= train SRGAN =========================###
         # update D
-        errD, _ = session.run([d_loss, d_optim], {t_real_image: XT, t_input_gen: XGENIN})
+        errD, _ = session.run([d_loss, d_optim])
         # update G
-        errG, _ = session.run([g_loss, g_optim], {t_input_gen: XGENIN})
-        print("Epoch [%2d/%2d] : d_loss: %.8f g_loss: %.8f " % (j, epochs,  errD, errG))
+        errG,mGlobal, _ = session.run([g_loss,m_global, g_optim])
+        print("Epoch [%2d/%2d] : d_loss: %.8f g_loss: %.8f m_global: %.8f " % (j, epochs,  errD, errG, mGlobal))
 
         ###========================= evaluate data =========================###
 
 
 if __name__ == '__main__':
-    train(batch_size=64, epochs=10)
+
+    data_path = "/path/to/data"
+    train(batch_size=64, epochs=10, dataset=DataInput(data_path, "train"))

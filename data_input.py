@@ -88,6 +88,8 @@ if __name__ == '__main__':
     dataset = DataInput(data_path, "train")
 
     images, filename = dataset.input_pipeline(1, 1, shuffle=True)
+    output = conv(images)
+    loss = loss(output)
 
     with tf.Session() as sess:
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
@@ -98,7 +100,7 @@ if __name__ == '__main__':
         threads = tf.train.start_queue_runners(coord=coord)
 
         for i in range(50):
-            im, filename_out = sess.run([images, filename])
+            loss_value = sess.run([loss])
             # Test whatever
 
         coord.request_stop()
