@@ -187,7 +187,7 @@ def train(batch_size, epochs, dataset):
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
 
-
+    # TODO: add multy gpu
     for j in range(0, epochs):
         ###========================= train SRGAN =========================###
         # update D
