@@ -8,6 +8,11 @@ from scipy import signal
 from scipy.io import wavfile
 import matplotlib.pyplot as plt
 
+from python_speech_features import mfcc
+from python_speech_features import delta
+from python_speech_features import logfbank
+import scipy.io.wavfile as wav
+
 def format_time(msecs):
     #Segurament es podira optimitzar fent operacions de modul
     #en comptes de divisions i casts
@@ -22,9 +27,9 @@ def format_time(msecs):
 #Indiquem el tamany relatiu respecte les dimensions del video que han de tenir les cares detectades
 min_face_size_relative = 0.15
 #Indiquem quin es la longitud del segments d'audio que volem extreure
-audio_lenght = 30 #si supera els 999 ms s'hauria de modificar el codi
+audio_lenght = 35 #si supera els 999 ms s'hauria de modificar el codi
 #Indiquem el percentatge d'overlap que volem entre segments d'audio
-overlap = 0.25
+overlap=0.25
 
 #Crem la carpeta de outpu en cas de que no existeixi
 if not os.path.exists('./output'):
@@ -131,10 +136,20 @@ with open('vid_list.txt') as f:
                     #Intentem crear spectograma pel segment extret
                     #Potser no hauriem d'extreure segment a segment sino tot el tros i llavors
                     #crear espectogrames per cada segment?
-                    sample_rate, samples = wavfile.read("./output/audio"+input_vid+str(current_frame)+".wav")
-                    samples = samples.sum(axis=1) / 2 #per passar a monochanel en principi
-                    frequencies, times, spectogram = signal.spectrogram(samples, sample_rate)
-                    cv2.imwrite("./output/" + input_vid + "_spectogram_" + str(current_frame) + ".jpg", spectogram);
+                    rate, sig = wavfile.read("./output/audio"+input_vid+str(current_frame)+".wav")
+                    sig = sig.sum(axis=1) / 2 #per passar a monochanel en principi
+
+
+                    mfcc(signal, samplerate=16000, winlen=0.025, winstep=0.01, numcep=13,
+                             nfilt=26, nfft=512, lowfreq=0, highfreq=None, preemph=0.97,
+                             ceplifter=22, appendEnergy=True)
+                    mfcc_feat = mfcc(sig, rate,)
+                    d_mfcc_feat = delta(mfcc_feat, 2)
+                    fbank_feat = logfbank(sig, rate)
+
+                    print(fbank_feat[1:3, :])
+
+                    cv2.imwrite("./output/" + input_vid + "_spectogram_" + str(current_frame) + ".jpg", fbank_feat);
                     isface = 0
 
                     # Display the resulting frame
