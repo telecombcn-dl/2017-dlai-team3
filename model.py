@@ -143,53 +143,57 @@ def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
 
 #audio_width/height
 #image_width/height
-def train(batch_size, epochs, dataset):
-
-    ###========================== DEFINE PIPELINE ============================###
-    images, audio, filename = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs, shuffle=True)
-
-
-    ###========================== DEFINE MODEL ============================###
-    net_gen = generator(input=audio, reuse=False)
-    net_d_real, d_z_false = discriminator(input=images, reuse=False)
-    net_d_false, d_z_false = discriminator(input=net_gen.outputs, reuse=True)
-
-    # ###========================== DEFINE TRAIN OPS ==========================###
-
-    lambda_k = 0.001
-    gamma = 0.5
-    k_t = tf.Variable(0., trainable=False, name='k_t')
-
-    g_vars = tl.layers.get_variables_with_name('generator', True, True)
-    d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
-    with tf.variable_scope('learning_rate'):
-        lr_v_g = tf.Variable(1e-4, trainable=False)
-        lr_v_d = tf.Variable(1e-4, trainable=False)
-
-    d_loss_real = tf.reduce_mean(tf.abs(net_d_real.outputs-t_real_image))
-    d_loss_fake = tf.reduce_mean(tf.abs(net_d_false.outputs-net_gen.outputs))
-
-    d_loss = d_loss_real - k_t * d_loss_fake
-    g_loss = tf.reduce_mean(tf.abs(net_d_false-net_gen.outputs))
-    g_optim = tf.train.AdamOptimizer(lr_v_g).minimize(g_loss, var_list=g_vars)
-    d_optim = tf.train.AdamOptimizer(lr_v_d).minimize(d_loss, var_list=d_vars)
-
-    balance = gamma*d_loss_real-g_loss
-    with tf.control_dependencies([d_optim, g_optim]):
-        k_update = tf.assign(k_t, tf.clip_by_value(k_t + lambda_k * balance , 0, 1))
+def train(batch_size, epochs, dataset, num_gpus):
+    g_loss = []
+    d_loss = []
+    k_t = []
+    with tf.variable_scope(tf.get_variable_scope()):
+        for i in xrange(num_gpus):
+            with tf.device('/gpu:{gpu_id}'.format(gpu_id=i)):
+                with tf.name_scope('tower_{}'.format(i)) as scope:
+                    ###========================== DEFINE PIPELINE ============================###
+                    real_images, audio, filename = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs, shuffle=True)
 
 
-    m_global = d_loss_real + tf.abs(balance)
+                    ###========================== DEFINE MODEL ============================###
+                    net_gen = generator(input=audio, reuse=False)
+                    net_d_real, d_z_false = discriminator(input=real_images, reuse=False)
+                    net_d_false, d_z_false = discriminator(input=net_gen.outputs, reuse=True)
 
-    images, filename = dataset.input_pipeline(batch_size, epochs, shuffle=True)
+                    # ###========================== DEFINE TRAIN OPS ==========================###
+
+                    lambda_k = 0.001
+                    gamma = 0.5
+                    k_t = tf.Variable(0., trainable=False, name='k_t')
+
+                    g_vars = tl.layers.get_variables_with_name('generator', True, True)
+                    d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
+                    with tf.variable_scope('learning_rate'):
+                        lr_v_g = tf.Variable(1e-4, trainable=False)
+                        lr_v_d = tf.Variable(1e-4, trainable=False)
+
+                    d_loss_real = tf.reduce_mean(tf.abs(net_d_real.outputs-real_images))
+                    d_loss_fake = tf.reduce_mean(tf.abs(net_d_false.outputs-net_gen.outputs))
+
+                    d_loss = d_loss_real - k_t * d_loss_fake
+                    g_loss = tf.reduce_mean(tf.abs(net_d_false-net_gen.outputs))
+                    g_gradients = tf.train.AdamOptimizer(lr_v_g).compute_gradients(g_loss, var_list=g_vars)
+                    d_gradients = tf.train.AdamOptimizer(lr_v_d).compute_gradients(d_loss, var_list=d_vars)
+
+                    balance = gamma*d_loss_real-g_loss
+                    with tf.control_dependencies([d_optim, g_optim]):
+                        k_update = tf.assign(k_t, tf.clip_by_value(k_t + lambda_k * balance , 0, 1))
+
+                    m_global = d_loss_real + tf.abs(balance)
+
+
     session = tf.Session()
     tl.layers.initialize_global_variables(session)
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
 
-    # TODO: add multy gpu
     for j in range(0, epochs):
-        ###========================= train SRGAN =========================###
+        ###========================= train GAN =========================###
         # update D
         errD, _ = session.run([d_loss, d_optim])
         # update G
@@ -202,4 +206,4 @@ def train(batch_size, epochs, dataset):
 if __name__ == '__main__':
 
     data_path = "/path/to/data"
-    train(batch_size=64, epochs=10, dataset=DataInput(data_path, "train"))
+    train(batch_size=64, epochs=10, dataset=DataInput(data_path, "train"), num_gpus=1)
