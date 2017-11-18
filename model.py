@@ -139,7 +139,7 @@ def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 3], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=None, name='Discriminator/Decoder/convLAST')
 
-        return z, x
+        return x, z
 
 #audio_width/height
 #image_width/height
@@ -181,7 +181,7 @@ def train(batch_size, epochs, dataset):
 
     m_global = d_loss_real + tf.abs(balance)
 
-    images, filename = dataset.input_pipeline(batch_size, epochs, shuffle=True)
+
     session = tf.Session()
     tl.layers.initialize_global_variables(session)
     coord = tf.train.Coordinator()
@@ -193,7 +193,7 @@ def train(batch_size, epochs, dataset):
         # update D
         errD, _ = session.run([d_loss, d_optim])
         # update G
-        errG,mGlobal, _ = session.run([g_loss,m_global, g_optim])
+        errG, mGlobal, _ = session.run([g_loss,m_global, g_optim])
         print("Epoch [%2d/%2d] : d_loss: %.8f g_loss: %.8f m_global: %.8f " % (j, epochs,  errD, errG, mGlobal))
 
         ###========================= evaluate data =========================###
