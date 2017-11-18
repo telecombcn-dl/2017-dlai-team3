@@ -166,7 +166,7 @@ def train(batch_size, epochs, dataset):
         lr_v_g = tf.Variable(1e-4, trainable=False)
         lr_v_d = tf.Variable(1e-4, trainable=False)
 
-    d_loss_real = tf.reduce_mean(tf.abs(net_d_real.outputs-t_real_image))
+    d_loss_real = tf.reduce_mean(tf.abs(net_d_real.outputs-images))
     d_loss_fake = tf.reduce_mean(tf.abs(net_d_false.outputs-net_gen.outputs))
 
     d_loss = d_loss_real - k_t * d_loss_fake
