@@ -29,6 +29,8 @@ face_margin = 1.25
 if not os.path.exists('./output'):
     os.makedirs('./output')
 
+file_association = open('./output/associations.txt','w')
+
 with open('vid_list.txt') as f:
     for line in f:
         print(line)
@@ -50,7 +52,7 @@ with open('vid_list.txt') as f:
         step_preview = int(num_frames/nsteps)
         num_previews = 0
         dimensions = 0
-        for i in range(0,num_frames,step_preview):
+        for i in range(0,num_frames-100,step_preview):
             print(i)
             video_capture.set(cv2.CAP_PROP_POS_FRAMES,i)
             current_frame = int(video_capture.get(cv2.CAP_PROP_POS_FRAMES))
@@ -68,10 +70,10 @@ with open('vid_list.txt') as f:
                 num_previews = num_previews +1
                 dimensions = dimensions + face[2]
         dimensions = dimensions/num_previews
-        video_capture.set(cv2.CAP_PROP_POS_FRAMES, 2)
-        current_frame = 2
+        video_capture.set(cv2.CAP_PROP_POS_FRAMES, 600)
+        current_frame = 600
 
-        while (current_frame < num_frames-100): #deixem un marge de 100 frames per si mal codificat
+        while (current_frame < num_frames-200): #deixem un marge de 100 frames per si mal codificat
             current_frame = int(video_capture.get(cv2.CAP_PROP_POS_FRAMES))
             current_time = video_capture.get(cv2.CAP_PROP_POS_MSEC)
             ret, frame = video_capture.read()
@@ -119,6 +121,7 @@ with open('vid_list.txt') as f:
                 sig = sig.sum(axis=1) / 2 #per passar a monochanel en principi
                 mfcc_feat = mfcc(sig, rate,0.002, 0.001)
                 mfcc_feat = mfcc_feat[:,1:]
+                file_association.write(input_vid+"_face_"+str(current_frame)+".jpg  " + input_vid + '_MFCC_' + str(current_frame) +'.npy\n')
                 cv2.imwrite("./output/" + input_vid + "_spectogram_" + str(current_frame) + ".jpg", mfcc_feat);
                 np.save('./output/' + input_vid + '_MFCC_' + str(current_frame), mfcc_feat)
             print(current_frame)
@@ -129,3 +132,4 @@ with open('vid_list.txt') as f:
 
         video_capture.release()
         cv2.destroyAllWindows()
+    file_association.close()

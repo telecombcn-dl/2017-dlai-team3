@@ -3,7 +3,8 @@ import tensorflow as tf
 from tensorlayer.layers import *
 from data_input import DataInput
 
-# ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
+
+# TODO: ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
 def generator(input, reuse, hidden_number=128, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
@@ -63,7 +64,8 @@ def generator(input, reuse, hidden_number=128, kernel=3):
 
         return x
 
-#z_num = 256 (Dimension Audio Features )
+
+# z_num = 256 (Dimension Audio Features )
 def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
@@ -139,23 +141,21 @@ def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 3], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=None, name='Discriminator/Decoder/convLAST')
 
-        return x, z
+        return z, x
 
-#audio_width/height
-#image_width/height
+
 def train(batch_size, epochs, dataset):
 
-    ###========================== DEFINE PIPELINE ============================###
-    images, audio, filename = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs, shuffle=True)
+    # ##========================== DEFINE PIPELINE ============================###
+    _, audio, _ = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
+    images, _, _ = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
 
-
-    ###========================== DEFINE MODEL ============================###
+    # ##========================== DEFINE MODEL ============================###
     net_gen = generator(input=audio, reuse=False)
     net_d_real, d_z_false = discriminator(input=images, reuse=False)
-    net_d_false, d_z_false = discriminator(input=net_gen.outputs, reuse=True)
+    net_d_false, d_z_false = discriminator(input=net_gen.outputs, reuse=True) # d_z_false???
 
     # ###========================== DEFINE TRAIN OPS ==========================###
-
     lambda_k = 0.001
     gamma = 0.5
     k_t = tf.Variable(0., trainable=False, name='k_t')
@@ -167,10 +167,10 @@ def train(batch_size, epochs, dataset):
         lr_v_d = tf.Variable(1e-4, trainable=False)
 
     d_loss_real = tf.reduce_mean(tf.abs(net_d_real.outputs-images))
-    d_loss_fake = tf.reduce_mean(tf.abs(net_d_false.outputs-net_gen.outputs))
+    d_loss_fake = tf.reduce_mean(tf.abs(net_d_false.outputs-net_gen.outputs)) # Why net_d_false.outputs
 
     d_loss = d_loss_real - k_t * d_loss_fake
-    g_loss = tf.reduce_mean(tf.abs(net_d_false-net_gen.outputs))
+    g_loss = tf.reduce_mean(tf.abs(net_d_false.outputs - net_gen.outputs)) # But here net_d_false
     g_optim = tf.train.AdamOptimizer(lr_v_g).minimize(g_loss, var_list=g_vars)
     d_optim = tf.train.AdamOptimizer(lr_v_d).minimize(d_loss, var_list=d_vars)
 
@@ -178,26 +178,36 @@ def train(batch_size, epochs, dataset):
     with tf.control_dependencies([d_optim, g_optim]):
         k_update = tf.assign(k_t, tf.clip_by_value(k_t + lambda_k * balance , 0, 1))
 
-
     m_global = d_loss_real + tf.abs(balance)
 
+    init_op = tf.global_variables_initializer()
 
+    # Create a session for running operations in the Graph.
     session = tf.Session()
+
+    # Initialize the variables (like the epoch counter).
+    session.run(init_op)
     tl.layers.initialize_global_variables(session)
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
 
+    try:
+        while not coord.should_stop():
+            # ##========================= train SRGAN =========================###
+            # update D
+            errD, _ = session.run([d_loss, d_optim])
+            # update G
+            errG,mGlobal, _ = session.run([g_loss, m_global, g_optim])
+            print("d_loss: %.8f g_loss: %.8f m_global: %.8f " % (errD, errG, mGlobal))
 
-    for j in range(0, epochs):
-        ###========================= train SRGAN =========================###
-        # update D
-        errD, _ = session.run([d_loss, d_optim])
-        # update G
-        errG, mGlobal, _ = session.run([g_loss,m_global, g_optim])
-        print("Epoch [%2d/%2d] : d_loss: %.8f g_loss: %.8f m_global: %.8f " % (j, epochs,  errD, errG, mGlobal))
+            # ##========================= evaluate data =========================###
 
-        ###========================= evaluate data =========================###
+    except tf.errors.OutOfRangeError:
+        print('Done -- epoch limit reached')
+    finally:
+        coord.request_stop()
 
+    coord.join(threads)
 
 if __name__ == '__main__':
 

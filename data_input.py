@@ -42,7 +42,7 @@ class DataInput(object):
         self.path = path
         self.name = name
 
-    def input_pipeline(self, batch_size, num_epochs, shuffle=True, num_threads=1):
+    def input_pipeline(self, batch_size, num_epochs, shuffle=False, num_threads=4):
         with tf.device('/cpu:0'):
             with tf.name_scope(self.name):
                 items = self._get_input_queue_items()
