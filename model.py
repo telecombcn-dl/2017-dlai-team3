@@ -2,6 +2,7 @@ import tensorlayer as tl
 import tensorflow as tf
 from tensorlayer.layers import *
 from data_input import DataInput
+from utils import norm_img, denorm_img
 
 
 # TODO: ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
@@ -141,19 +142,22 @@ def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 3], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=None, name='Discriminator/Decoder/convLAST')
 
-        return z, x
+        return x, z
 
 
 def train(batch_size, epochs, dataset):
 
     # ##========================== DEFINE PIPELINE ============================###
-    _, audio, _ = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
-    images, _, _ = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
+    images, audio, _ = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
+    images = norm_img(images)  # Normalization
 
     # ##========================== DEFINE MODEL ============================###
     net_gen = generator(input=audio, reuse=False)
-    net_d_real, d_z_false = discriminator(input=images, reuse=False)
-    net_d_false, d_z_false = discriminator(input=net_gen.outputs, reuse=True) # d_z_false???
+    net_d, d_z = discriminator(input=tf.concat([net_gen.outputs, images]))
+    net_d_false, net_d_real = tf.split(net_d.outputs, 2)
+
+    output_gen = denorm_img(net_gen.outputs)  # Denormalization
+    ae_gen, ae_real = denorm_img(net_d_false.outputs), denorm_img(net_d_real.outputs)  # Denormalization
 
     # ###========================== DEFINE TRAIN OPS ==========================###
     lambda_k = 0.001
@@ -166,27 +170,24 @@ def train(batch_size, epochs, dataset):
         lr_v_g = tf.Variable(1e-4, trainable=False)
         lr_v_d = tf.Variable(1e-4, trainable=False)
 
-    d_loss_real = tf.reduce_mean(tf.abs(net_d_real.outputs-images))
-    d_loss_fake = tf.reduce_mean(tf.abs(net_d_false.outputs-net_gen.outputs)) # Why net_d_false.outputs
+    d_loss_real = tf.reduce_mean(tf.abs(ae_real-images))
+    d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
 
     d_loss = d_loss_real - k_t * d_loss_fake
-    g_loss = tf.reduce_mean(tf.abs(net_d_false.outputs - net_gen.outputs)) # But here net_d_false
+    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
     g_optim = tf.train.AdamOptimizer(lr_v_g).minimize(g_loss, var_list=g_vars)
     d_optim = tf.train.AdamOptimizer(lr_v_d).minimize(d_loss, var_list=d_vars)
 
     balance = gamma*d_loss_real-g_loss
     with tf.control_dependencies([d_optim, g_optim]):
-        k_update = tf.assign(k_t, tf.clip_by_value(k_t + lambda_k * balance , 0, 1))
+        k_update = tf.assign(k_t, tf.clip_by_value(k_t + lambda_k * balance, 0, 1))
 
     m_global = d_loss_real + tf.abs(balance)
-
-    init_op = tf.global_variables_initializer()
 
     # Create a session for running operations in the Graph.
     session = tf.Session()
 
     # Initialize the variables (like the epoch counter).
-    session.run(init_op)
     tl.layers.initialize_global_variables(session)
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord=coord)
@@ -194,11 +195,8 @@ def train(batch_size, epochs, dataset):
     try:
         while not coord.should_stop():
             # ##========================= train SRGAN =========================###
-            # update D
-            errD, _ = session.run([d_loss, d_optim])
-            # update G
-            errG,mGlobal, _ = session.run([g_loss, m_global, g_optim])
-            print("d_loss: %.8f g_loss: %.8f m_global: %.8f " % (errD, errG, mGlobal))
+            kt, mGlobal = session.run([k_update, m_global])
+            print("kt: %.8f Mglobal: %.8f" % (kt, mGlobal))
 
             # ##========================= evaluate data =========================###
 

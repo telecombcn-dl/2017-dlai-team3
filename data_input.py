@@ -22,7 +22,7 @@ def _read_item(queue):
     with tf.name_scope('decode_image'):
         image = tf.image.decode_jpeg(encoded_image, channels=3)
         image = tf.to_float(image)
-        image = tf.reshape(image, [224, 224, 3])
+        image = tf.reshape(image, [64, 64, 3])
 
     return image, image_path
 
@@ -88,8 +88,6 @@ if __name__ == '__main__':
     dataset = DataInput(data_path, "train")
 
     images, filename = dataset.input_pipeline(1, 1, shuffle=True)
-    output = conv(images)
-    loss = loss(output)
 
     with tf.Session() as sess:
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
