@@ -1,39 +1,34 @@
-import os
 import tensorflow as tf
+import os
+
+AUDIO_WIDTH = 12
+AUDIO_HEIGHT = 35
 
 
-def _preprocess_example(example):
-    image = example[0]
-
-    with tf.name_scope('image_normalization'):
-        # Imagenet mean values per channel in BGR format
-        imagenet_mean = tf.constant([103.939, 116.779, 123.68], dtype=tf.float32, name='imagenet_mean')
-        image = tf.reverse(image, axis=[-1], name='rgb_to_bgr')
-        image = tf.subtract(image, imagenet_mean, name='subtract_imagenet_mean')
-
-    return image, example[1]
-
-
-def _read_item(queue):
+def _read_item(face_queue, audio_queue):
     reader = tf.WholeFileReader()
-    image_path, encoded_image = reader.read(queue)
+    _, face_image = reader.read(face_queue)
+    _, audio_image = reader.read(audio_queue)
 
-    # Read and decode image
-    with tf.name_scope('decode_image'):
-        image = tf.image.decode_jpeg(encoded_image, channels=3)
-        image = tf.to_float(image)
-        image = tf.reshape(image, [64, 64, 3])
 
-    return image, image_path
+    with tf.name_scope('decode_face_image'):
+        face_image = tf.image.decode_jpeg(face_image, channels=3)
+        face_image = tf.to_float(face_image)
+        face_image = tf.reshape(face_image, [64, 64, 3])
+
+    with tf.name_scope('decode_audio_image'):
+        audio_image = tf.image.decode_jpeg(audio_image, channels=1)
+        audio_image = tf.to_float(audio_image)
+        audio_image = tf.reshape(audio_image, [AUDIO_HEIGHT, AUDIO_WIDTH, 1])
+
+    return face_image, audio_image
 
 
 def _create_batch(example, batch_size, num_threads):
     # Specify the samples queue parameters
     min_after_dequeue = 10 * batch_size
     capacity = min_after_dequeue + (num_threads + 3) * batch_size
-    images_batch, filename = tf.train.batch(example, batch_size=batch_size, capacity=capacity,
-                                            num_threads=num_threads)
-    return images_batch, filename
+    return tf.train.batch(example, batch_size=batch_size, capacity=capacity, num_threads=num_threads)
 
 
 class DataInput(object):
@@ -45,49 +40,29 @@ class DataInput(object):
     def input_pipeline(self, batch_size, num_epochs, shuffle=False, num_threads=4):
         with tf.device('/cpu:0'):
             with tf.name_scope(self.name):
-                items = self._get_input_queue_items()
-                queue = tf.train.string_input_producer(items, num_epochs=num_epochs, shuffle=shuffle)
-                example = _read_item(queue)
-                example = _preprocess_example(example)
+                items_faces, items_audio = self._get_input_queue_items()
+                face_queue = tf.train.string_input_producer(items_faces, num_epochs=num_epochs, shuffle=shuffle)
+                audio_queue = tf.train.string_input_producer(items_audio, num_epochs=num_epochs, shuffle=shuffle)
+                example = _read_item(face_queue, audio_queue)
                 return _create_batch(example, batch_size, num_threads)
 
-    def decode_jpeg(image_buffer, scope=None):
-        """Decode a JPEG string into one 3-D float image Tensor.
-        Args:
-          image_buffer: scalar string Tensor.
-          scope: Optional scope for op_scope.
-        Returns:
-          3-D float Tensor with values ranging from [0, 1).
-        """
-        with tf.name_scope(scope, 'decode_jpeg', [image_buffer]):
-            # Decode the string as an RGB JPEG.
-            # Note that the resulting image contains an unknown height and width
-            # that is set dynamically by decode_jpeg. In other words, the height
-            # and width of image is unknown at compile-time.
-            image = tf.image.decode_jpeg(image_buffer, channels=3)
-
-            # After this point, all image pixels reside in [0,1)
-            # until the very end, when they're rescaled to (-1, 1).  The various
-            # adjust_* ops all require this range for dtype float.
-            image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-            return image
-
     def _get_input_queue_items(self):
-        """Method that should return a list of items that contain the dataset."""
-        images_filenames = [os.path.join(self.path, f) for f in os.listdir(self.path)
-                            if os.path.isfile(os.path.join(self.path, f))]
+        face_image_list = [os.path.join(self.path, f) for f in os.listdir(self.path)
+                           if os.path.isfile(os.path.join(self.path, f)) and
+                           '_face_' in f]
 
-        images_filenames.sort()
-        return images_filenames
+        audio_image_list = [item.replace("_face_", "_spectogram_") for item in face_image_list]
+
+        return face_image_list, audio_image_list
 
 
 if __name__ == '__main__':
 
-    data_path = "/path/to/data"
+    data_path = "/storage/dataset_videos/audio2faces_dataset/"
 
     dataset = DataInput(data_path, "train")
 
-    images, filename = dataset.input_pipeline(1, 1, shuffle=True)
+    face_image, audio_image = dataset.input_pipeline(batch_size=1, num_epochs=1, shuffle=False)
 
     with tf.Session() as sess:
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
@@ -97,9 +72,10 @@ if __name__ == '__main__':
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
 
-        for i in range(50):
-            loss_value = sess.run([loss])
-            # Test whatever
+        for i in range(1):
+            face_image_value, audio_image_value = sess.run([face_image, audio_image])
+            print face_image_value[0].shape
+            print audio_image_value[0]
 
         coord.request_stop()
         coord.join(threads)

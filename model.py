@@ -6,26 +6,27 @@ from utils import norm_img, denorm_img
 
 
 # TODO: ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
-def generator(input, reuse, hidden_number=128, kernel=3):
+def generator(gen_input, reuse, batch_size, hidden_number=64, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
-    with tf.variable.scope("generator", reuse=reuse):
+    with tf.variable_scope("generator", reuse=reuse):
         tl.layers.set_name_reuse(reuse)
 
         # EXTRACT AUDIO FEATURES
-        x = InputLayer(input, name="in") #[batch_size, height, width, 1]
+        x = InputLayer(gen_input, name="in") #[batch_size, height, width, 1]
         x = Conv2dLayer(x, shape=[kernel, kernel, 1, 64], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
                         name='AudioFeatures/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, 64, 128], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
                         name='AudioFeatures/conv2')
-        #max o avg pool?
+        # max o avg pool?
         # stride only time axis (ESTA BIEN?)
-        x = PoolLayer(x,strides=[1,1,2,1],pool=tf.nn.avg_pool, name='AudioFeatures/pool1')
+        x = PoolLayer(x,strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool1')
         x = Conv2dLayer(x, shape=[kernel, kernel, 128, 256], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
                         name='AudioFeatures/conv3')
         x = Conv2dLayer(x, shape=[kernel, kernel, 256, 512], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
                         name='AudioFeatures/conv4')
-        x = PoolLayer(x, strides=[1, 1, 2, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool2')
+        x = PoolLayer(x, strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool2')
+        x = FlattenLayer(x, name='AudioFeatures/flatten')
         x = DenseLayer(x, n_units=512, name='AudioFeatures/dense1')
         x = DenseLayer(x, n_units=256, name='AudioFeatures/dense2') #[batch_size, 256]
 
@@ -36,47 +37,48 @@ def generator(input, reuse, hidden_number=128, kernel=3):
         # even better visual results
         # Down-sampling is implemented as sub-sampling with stride 2 and up- sampling is done by nearest neighbor.
         x = DenseLayer(x, n_units=8*8*hidden_number, name='Generator/dense2')
-        x = tf.reshape(x, shape=[8,8,hidden_number], name='Generator/reshape1')
+        arguments = {'shape': [batch_size, 8, 8, hidden_number], 'name': 'Generator/reshape1'}
+        x = LambdaLayer(x, fn=tf.reshape, fn_args=arguments)
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1,1,1,1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu,name='Generator/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu,name='Generator/conv2')
-        x = UpSampling2dLayer(x, size=2, is_scale=True, method=1, name='Generator/UpSampling1') # method= 1 NN
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling1') # method= 1 NN
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, 2*hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu,name='Generator/conv3')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init,act=tf.nn.elu, name='Generator/conv4')
-        x = UpSampling2dLayer(x, size=2, is_scale=True, method=1, name='Encoder/UpSampling2')  # method= 1 NN
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv4')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Encoder/UpSampling2')  # method= 1 NN
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, 2*hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu,name='Generator/conv5')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu,name='Generator/conv6')
-        x = UpSampling2dLayer(x, size=2, is_scale=True, method=1, name='Generator/UpSampling3')  # method= 1 NN
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling3')  # method= 1 NN
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, 2 * hidden_number, hidden_number], strides=[1, 1, 1, 1],
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1],
                         padding='SAME',
                         W_init=w_init,act=tf.nn.elu, name='Generator/conv7')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv8')
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv8')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 3], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=None,name='Generator/convLAST')
+                        W_init=w_init, name='Generator/convLAST')
 
         return x
 
 
 # z_num = 256 (Dimension Audio Features )
-def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
+def discriminator(disc_input, reuse, batch_size, z_num=256, hidden_number=64, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
     with tf.variable_scope("discriminator", reuse=reuse):
         tl.layers.set_name_reuse(reuse)
 
         # Encoder
-        #Down-sampling is implemented as sub-sampling with stride 2
+        # Down-sampling is implemented as sub-sampling with stride 2
 
-        x = InputLayer(input, name='in') #[1, height = 64, width = 64, 3 ]
+        x = InputLayer(disc_input, name='in')  # [1, height = 64, width = 64, 3 ]
         x = Conv2dLayer(x, shape=[kernel, kernel, 3, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init,act=tf.nn.elu, name='Discriminator/Encoder/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
@@ -85,7 +87,7 @@ def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
                         W_init=w_init,act=tf.nn.elu, name='Discriminator/Encoder/conv3')
         x = Conv2dLayer(x, shape=[kernel, kernel, 2*hidden_number, 2*hidden_number], strides=[1, 2, 2, 1], padding='SAME',
                         W_init=w_init,act=tf.nn.elu, name='Discriminator/Encoder/subsampling1')
-        #[1, height = 32, width = 32, 2*hidden_number]
+        # [1, height = 32, width = 32, 2*hidden_number]
 
         x = Conv2dLayer(x, shape=[kernel, kernel, 2*hidden_number, 2*hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init,act=tf.nn.elu, name='Discriminator/Encoder/conv4')
@@ -93,7 +95,7 @@ def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
                         padding='SAME', W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv5')
         x = Conv2dLayer(x, shape=[kernel, kernel, 3 * hidden_number, 3 * hidden_number], strides=[1, 2, 2, 1],
                         padding='SAME', W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/subsampling2')
-        #[1, height = 16, width = 16, 3*hidden_number]
+        # [1, height = 16, width = 16, 3*hidden_number]
 
         x = Conv2dLayer(x, shape=[kernel, kernel, 3 * hidden_number, 3 * hidden_number], strides=[1, 1, 1, 1],
                         padding='SAME',
@@ -105,42 +107,42 @@ def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
         # [1, height = 8, width = 8, 4*hidden_number]
 
         x = Conv2dLayer(x, shape=[kernel, kernel, 4 * hidden_number, 4 * hidden_number], strides=[1, 1, 1, 1],
-                        padding='SAME',  W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv6')
+                        padding='SAME',  W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv8')
         x = Conv2dLayer(x, shape=[kernel, kernel, 4 * hidden_number, 4 * hidden_number], strides=[1, 1, 1, 1],
-                        padding='SAME', W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv7')
+                        padding='SAME', W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv9')
 
-        z = DenseLayer(x, n_units=z_num, name = 'Discriminator/Encoder/Dense')
+        x = FlattenLayer(x, name='Discriminator/Encoder/flatten')
+        z = DenseLayer(x, n_units=z_num, name='Discriminator/Encoder/Dense')
 
         # Decoder
-        x = DenseLayer(z, n_units=8 * 8 * hidden_number, name='Discriminator/Decoder/dense2')
-        x = tf.reshape(x, shape=[8, 8, hidden_number], name='Discriminator/Decoder/reshape1')
+        x = DenseLayer(x, n_units=8 * 8 * hidden_number, name='Generator/dense2')
+        arguments = {'shape': [2*batch_size, 8, 8, hidden_number], 'name': 'Generator/reshape1'}
+        x = LambdaLayer(x, fn=tf.reshape, fn_args=arguments)
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Decoder/conv1')
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Decoder/conv2')
-        x = UpSampling2dLayer(x, size=2, is_scale=True, method=1, name='Discriminator/Decoder/UpSampling1')  # method= 1 NN
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv2')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling1')  # method= 1 NN
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, 2 * hidden_number, hidden_number], strides=[1, 1, 1, 1],
-                        padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Decoder/conv3')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Decoder/conv4')
-        x = UpSampling2dLayer(x, size=2, is_scale=True, method=1, name='Discriminator/Decoder/UpSampling2')  # method= 1 NN
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv3')
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv4')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Encoder/UpSampling2')  # method= 1 NN
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, 2 * hidden_number, hidden_number], strides=[1, 1, 1, 1],
-                        padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Decoder/conv5')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Decoder/conv6')
-        x = UpSampling2dLayer(x, size=2, is_scale=True, method=1, name='Discriminator/Decoder/UpSampling3')  # method= 1 NN
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv5')
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv6')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling3')  # method= 1 NN
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, 2 * hidden_number, hidden_number], strides=[1, 1, 1, 1],
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1],
                         padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Decoder/conv7')
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv7')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Decoder/conv8')
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv8')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 3], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=None, name='Discriminator/Decoder/convLAST')
+                        W_init=w_init, name='Generator/convLAST')
 
         return x, z
 
@@ -148,16 +150,16 @@ def discriminator(input, reuse,z_num = 256, hidden_number = 128, kernel=3):
 def train(batch_size, epochs, dataset):
 
     # ##========================== DEFINE PIPELINE ============================###
-    images, audio, _ = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
+    images, audio = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
     images = norm_img(images)  # Normalization
 
     # ##========================== DEFINE MODEL ============================###
-    net_gen = generator(input=audio, reuse=False)
-    net_d, d_z = discriminator(input=tf.concat([net_gen.outputs, images]))
+    net_gen = generator(gen_input=audio, batch_size=batch_size, reuse=False)
+    net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images], 0), batch_size=batch_size, reuse=False)
     net_d_false, net_d_real = tf.split(net_d.outputs, 2)
 
     output_gen = denorm_img(net_gen.outputs)  # Denormalization
-    ae_gen, ae_real = denorm_img(net_d_false.outputs), denorm_img(net_d_real.outputs)  # Denormalization
+    ae_gen, ae_real = denorm_img(net_d_false), denorm_img(net_d_real)  # Denormalization
 
     # ###========================== DEFINE TRAIN OPS ==========================###
     lambda_k = 0.001
@@ -184,30 +186,29 @@ def train(batch_size, epochs, dataset):
 
     m_global = d_loss_real + tf.abs(balance)
 
-    # Create a session for running operations in the Graph.
-    session = tf.Session()
+    with tf.Session() as sess:
+        init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+        sess.run(init_op)
 
-    # Initialize the variables (like the epoch counter).
-    tl.layers.initialize_global_variables(session)
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(coord=coord)
+        # Coordinate the different workers for the input data pipeline
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
 
-    try:
-        while not coord.should_stop():
-            # ##========================= train SRGAN =========================###
-            kt, mGlobal = session.run([k_update, m_global])
-            print("kt: %.8f Mglobal: %.8f" % (kt, mGlobal))
 
-            # ##========================= evaluate data =========================###
+        try:
+            while not coord.should_stop():
+                # ##========================= train SRGAN =========================###
+                kt, mGlobal = sess.run([k_update, m_global])
+                print("kt: %.8f Mglobal: %.8f" % (kt, mGlobal))
 
-    except tf.errors.OutOfRangeError:
-        print('Done -- epoch limit reached')
-    finally:
-        coord.request_stop()
+                # ##========================= evaluate data =========================###
 
-    coord.join(threads)
+        except tf.errors.OutOfRangeError:
+            print('Done -- epoch limit reached')
+        finally:
+            coord.request_stop()
+            coord.join(threads)
 
 if __name__ == '__main__':
-
-    data_path = "/path/to/data"
-    train(batch_size=64, epochs=10, dataset=DataInput(data_path, "train"))
+    data_path = "/storage/dataset_videos/audio2faces_dataset/"
+    train(batch_size=64, epochs=1, dataset=DataInput(data_path, "train"))
