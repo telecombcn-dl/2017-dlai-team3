@@ -1,5 +1,6 @@
 import tensorlayer as tl
 import tensorflow as tf
+import os
 from tensorlayer.layers import *
 from data_input import DataInput
 from utils import norm_img, denorm_img
@@ -68,8 +69,8 @@ def generator(gen_input, reuse, batch_size, hidden_number=64, kernel=3):
         return x
 
 
-# z_num = 256 (Dimension Audio Features )
-def discriminator(disc_input, reuse, batch_size, z_num=256, hidden_number=64, kernel=3):
+
+def discriminator(disc_input, reuse, batch_size, z_num=64, hidden_number=128, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
     with tf.variable_scope("discriminator", reuse=reuse):
@@ -147,16 +148,23 @@ def discriminator(disc_input, reuse, batch_size, z_num=256, hidden_number=64, ke
         return x, z
 
 
-def train(batch_size, epochs, dataset):
+def train(batch_size, epochs, dataset, log_dir):
 
     # ##========================== DEFINE PIPELINE ============================###
     images, audio = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
-    images = norm_img(images)  # Normalization
+    tf.summary.image('input_image', images)
+    tf.summary.image('audio_images', audio)
+    images_normalized = norm_img(images)  # Normalization
+    tf.summary.image('norm_input_image', images_normalized)
 
     # ##========================== DEFINE MODEL ============================###
     net_gen = generator(gen_input=audio, batch_size=batch_size, reuse=False)
-    net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images], 0), batch_size=batch_size, reuse=False)
-    net_d_false, net_d_real = tf.split(net_d.outputs, 2)
+    tf.summary.image('norm_generated_image', net_gen.outputs)
+    tf.summary.image('generated_image', denorm_img(net_gen.outputs))
+    net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), batch_size=batch_size, reuse=False)
+    net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
+    tf.summary.image('autoencoder_real', denorm_img(net_d_real))
+    tf.summary.image('autoencoder_fake', denorm_img(net_d_false))
 
     output_gen = denorm_img(net_gen.outputs)  # Denormalization
     ae_gen, ae_real = denorm_img(net_d_false), denorm_img(net_d_real)  # Denormalization
@@ -169,16 +177,22 @@ def train(batch_size, epochs, dataset):
     g_vars = tl.layers.get_variables_with_name('generator', True, True)
     d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
     with tf.variable_scope('learning_rate'):
-        lr_v_g = tf.Variable(1e-4, trainable=False)
-        lr_v_d = tf.Variable(1e-4, trainable=False)
+        g_lr = tf.Variable(0.00008, trainable=False)
+        d_lr = tf.Variable(0.00008, trainable=False)
+
+    lr_lower_boundary=0.00002
+    g_lr_update = tf.assign(g_lr, tf.maximum(g_lr * 0.5, lr_lower_boundary), name='g_lr_update')
+    d_lr_update = tf.assign(d_lr, tf.maximum(d_lr * 0.5, lr_lower_boundary), name='d_lr_update')
+
 
     d_loss_real = tf.reduce_mean(tf.abs(ae_real-images))
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
 
     d_loss = d_loss_real - k_t * d_loss_fake
+    #g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen)) + tf.reduce_mean(tf.losses.mean_squared_error(output_gen, images))
     g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
-    g_optim = tf.train.AdamOptimizer(lr_v_g).minimize(g_loss, var_list=g_vars)
-    d_optim = tf.train.AdamOptimizer(lr_v_d).minimize(d_loss, var_list=d_vars)
+    g_optim = tf.train.AdamOptimizer(g_lr).minimize(g_loss, var_list=g_vars)
+    d_optim = tf.train.AdamOptimizer(d_lr).minimize(d_loss, var_list=d_vars)
 
     balance = gamma*d_loss_real-g_loss
     with tf.control_dependencies([d_optim, g_optim]):
@@ -186,7 +200,14 @@ def train(batch_size, epochs, dataset):
 
     m_global = d_loss_real + tf.abs(balance)
 
+    tf.summary.scalar('m_global', m_global)
+    tf.summary.scalar('k_t', k_t)
+
+    summary = tf.summary.merge_all()
     with tf.Session() as sess:
+        # Summary writer to save logs
+        summary_writer = tf.summary.FileWriter(os.path.join(log_dir, 'train'), sess.graph)
+
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         sess.run(init_op)
 
@@ -196,10 +217,22 @@ def train(batch_size, epochs, dataset):
 
 
         try:
+            iteration = 0
+            lr_update_step = 100000
             while not coord.should_stop():
+                iteration += 1
                 # ##========================= train SRGAN =========================###
                 kt, mGlobal = sess.run([k_update, m_global])
                 print("kt: %.8f Mglobal: %.8f" % (kt, mGlobal))
+                summary_str = sess.run(summary)
+                summary_writer.add_summary(summary_str, iteration)
+
+                summary_writer.flush()
+
+                # ##========================= update learning rate =========================###
+                if iteration % lr_update_step == lr_update_step - 1:
+                    sess.run([g_lr_update, d_lr_update])
+
 
                 # ##========================= evaluate data =========================###
 
@@ -209,6 +242,8 @@ def train(batch_size, epochs, dataset):
             coord.request_stop()
             coord.join(threads)
 
+
 if __name__ == '__main__':
     data_path = "/storage/dataset_videos/audio2faces_dataset/"
-    train(batch_size=64, epochs=1, dataset=DataInput(data_path, "train"))
+    log_dir = "./logs"
+    train(batch_size=16, epochs=10, dataset=DataInput(data_path, "train"), log_dir=log_dir)
