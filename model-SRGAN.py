@@ -8,8 +8,11 @@ from utils import norm_img, denorm_img, smooth_gan_labels
 def lrelu2(x, name="lrelu"):
     return tf.maximum(x, 0.3*x)
 
+def lrelu1(x, name="lrelu1"):
+    return tf.maximum(x, 0.25*x)
+
 # TODO: ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
-def generator(gen_input, reuse, batch_size, hidden_number=64, kernel=3):
+def generator(gen_input, reuse, batch_size, nb = 6, hidden_number=64, kernel=3, is_train = True):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
     with tf.variable_scope("generator", reuse=reuse):
@@ -41,34 +44,59 @@ def generator(gen_input, reuse, batch_size, hidden_number=64, kernel=3):
         x = DenseLayer(x, n_units=8*8*hidden_number, name='Generator/dense2')
         arguments = {'shape': [batch_size, 8, 8, hidden_number], 'name': 'Generator/reshape1'}
         x = LambdaLayer(x, fn=tf.reshape, fn_args=arguments)
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1,1,1,1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv1')
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv2')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling1') # method= 1 NN
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 32], strides=[1, 1, 1, 1],
+                        padding='SAME', W_init=w_init, name='conv1')
+        x = BatchNormLayer(x, act=lrelu1, is_train=is_train, name='BN-conv1')
+        inputRB = x
+        inputadd = x
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv3')
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Generator/conv4')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Encoder/UpSampling2')  # method= 1 NN
+        # residual blocks
+        for i in range(nb):
+            x = Conv2dLayer(x, shape=[kernel, kernel, 32, 32], strides=[1, 1, 1, 1],
+                            padding='SAME', W_init=w_init, name='conv1-rb/%s' % i)
+            x = BatchNormLayer(x, act=lrelu1, is_train=is_train, name='BN1-rb/%s' % i)
+            x = Conv2dLayer(x, shape=[kernel, kernel, 32, 32], strides=[1, 1, 1, 1],
+                            padding='SAME', W_init=w_init, name='conv2-rb/%s' % i)
+            x = BatchNormLayer(x, is_train=is_train, name='BN2-rb/%s' % i, )
+            # short skip connection
+            x = ElementwiseLayer([x, inputadd], tf.add, name='add-rb/%s' % i)
+            inputadd = x
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv5')
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv6')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling3')  # method= 1 NN
+        # large skip connection
+        x = Conv2dLayer(x, shape=[kernel, kernel, 32, 32], strides=[1, 1, 1, 1],
+                        padding='SAME', W_init=w_init, name='conv2')
+        x = BatchNormLayer(x, is_train=is_train, name='BN-conv2')
+        x = ElementwiseLayer([x, inputRB], tf.add, name='add-conv2')
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1],
-                        padding='SAME',
-                        W_init=w_init,act=tf.nn.elu, name='Generator/conv7')
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Generator/conv8')
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 3], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, name='Generator/convLAST')
+        # at that point, x=[batchsize,32,32,23,32]
+
+        # upscaling block 1
+        x = Conv2dLayer(x, shape=[kernel, kernel, 32, 64], act=lrelu1, strides=[1, 1, 1, 1],
+                        padding='SAME', W_init=w_init, name='conv1-ub/1')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling1')
+        x = Conv2dLayer(InputLayer(x, name='in ub1 conv2'), shape=[kernel, kernel, 64, 64], act=lrelu1,
+                        strides=[1, 1, 1, 1],
+                        padding='SAME', W_init=w_init, name='conv2-ub/1')
+        # upscaling block 2
+        x = Conv2dLayer(x, shape=[kernel, kernel, 32, 64], act=lrelu1, strides=[1, 1, 1, 1],
+                        padding='SAME', W_init=w_init, name='conv1-ub/2')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling2')
+        x = Conv2dLayer(InputLayer(x, name='in ub2 conv2'), shape=[kernel, kernel, 64, 64], act=lrelu1,
+                        strides=[1, 1, 1, 1],
+                        padding='SAME', W_init=w_init, name='conv2-ub/2')
+        # upscaling block 3
+        x = Conv2dLayer(x, shape=[kernel, kernel, 32, 64], act=lrelu1, strides=[1, 1, 1, 1],
+                        padding='SAME', W_init=w_init, name='conv1-ub/3')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling2')
+        x = Conv2dLayer(InputLayer(x, name='in ub3 conv3'), shape=[kernel, kernel, 64, 64], act=lrelu1,
+                        strides=[1, 1, 1, 1],
+                        padding='SAME', W_init=w_init, name='conv2-ub/3')
+
+
+        x = Conv3dLayer(x, shape=[kernel, kernel, 64, 1], strides=[1, 1, 1, 1],
+                        act=tf.nn.tanh, padding='SAME', W_init=w_init, name='convlast')
 
         return x
-
 
 
 def discriminator(disc_input, reuse, kernel=3, is_train=True):
@@ -167,7 +195,9 @@ def train(batch_size, epochs, dataset, log_dir):
     tf.summary.scalar('learning rate', learning_rate)
 
     summary = tf.summary.merge_all()
-    with tf.Session() as sess:
+    config = tf.ConfigProto(device_count={'GPU': 1})
+
+    with tf.Session(config) as sess:
         # Summary writer to save logs
         summary_writer = tf.summary.FileWriter(os.path.join(log_dir, 'train'), sess.graph)
 
