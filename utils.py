@@ -6,3 +6,13 @@ def norm_img(image):
 
 def denorm_img(norm):
     return tf.clip_by_value((norm + 1)*127.5, 0, 255)
+
+def smooth_gan_labels(y):
+    y_out = tf.zeros_like(y)
+
+    if y == 0:
+        y_out = tf.random_uniform(shape=y.get_shape(), minval=0.0, maxval=0.3)
+    else:
+        y_out = tf.random_uniform(shape=y.get_shape(), minval=0.7, maxval=1.2)
+
+    return y_out

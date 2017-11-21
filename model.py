@@ -171,7 +171,7 @@ def train(batch_size, epochs, dataset, log_dir):
 
     # ###========================== DEFINE TRAIN OPS ==========================###
     lambda_k = 0.001
-    gamma = 0.5
+    gamma = 0.7
     k_t = tf.Variable(0., trainable=False, name='k_t')
 
     g_vars = tl.layers.get_variables_with_name('generator', True, True)
@@ -189,7 +189,6 @@ def train(batch_size, epochs, dataset, log_dir):
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
 
     d_loss = d_loss_real - k_t * d_loss_fake
-    #g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen)) + tf.reduce_mean(tf.losses.mean_squared_error(output_gen, images))
     g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
     g_optim = tf.train.AdamOptimizer(g_lr).minimize(g_loss, var_list=g_vars)
     d_optim = tf.train.AdamOptimizer(d_lr).minimize(d_loss, var_list=d_vars)
