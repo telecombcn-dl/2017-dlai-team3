@@ -204,4 +204,4 @@ def train(batch_size, epochs, dataset, log_dir):
 if __name__ == '__main__':
     data_path = "/storage/dataset_videos/audio2faces_dataset/"
     log_dir = "./logs"
-    train(batch_size=16, epochs=10, dataset=DataInput(data_path, "train"), log_dir=log_dir)
+    train(batch_size=16, epochs=1000, dataset=DataInput(data_path, "train"), log_dir=log_dir)
