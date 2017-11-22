@@ -1,9 +1,22 @@
 import tensorlayer as tl
-import tensorflow as tf
 import os
 from tensorlayer.layers import *
 from data_input import DataInput
 from utils import norm_img, denorm_img
+import argparse
+
+DEFAULT_DATA_PATH = "/storage/dataset_videos/audio2faces_dataset/"
+DEFAULT_LOG_DIR = "/storage/logs"
+DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
+
+
+def restore_model(sess):
+    # Get the state of the checkpoint and then restore using ckpt path
+    ckpt = tf.train.get_checkpoint_state(args.checkpoint_path)
+
+    if args.checkpoint_dir is not None:
+        restorer = tf.train.Saver()
+        restorer.restore(sess, ckpt.model_checkpoint_path)
 
 
 # TODO: ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
@@ -67,7 +80,6 @@ def generator(gen_input, reuse, batch_size, hidden_number=64, kernel=3):
                         W_init=w_init, name='Generator/convLAST')
 
         return x
-
 
 
 def discriminator(disc_input, reuse, batch_size, z_num=64, hidden_number=128, kernel=3):
@@ -149,6 +161,7 @@ def discriminator(disc_input, reuse, batch_size, z_num=64, hidden_number=128, ke
 
 
 def train(batch_size, epochs, dataset, log_dir):
+    global_step = tf.Variable(0, name='global_step', trainable=False)
 
     # ##========================== DEFINE PIPELINE ============================###
     images, audio = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
@@ -204,11 +217,15 @@ def train(batch_size, epochs, dataset, log_dir):
 
     summary = tf.summary.merge_all()
     with tf.Session() as sess:
+        saver = tf.train.Saver(max_to_keep=1)
         # Summary writer to save logs
         summary_writer = tf.summary.FileWriter(os.path.join(log_dir, 'train'), sess.graph)
 
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         sess.run(init_op)
+
+        if args.resume == "True":
+            restore_model(sess)
 
         # Coordinate the different workers for the input data pipeline
         coord = tf.train.Coordinator()
@@ -221,7 +238,7 @@ def train(batch_size, epochs, dataset, log_dir):
             while not coord.should_stop():
                 iteration += 1
                 # ##========================= train SRGAN =========================###
-                kt, mGlobal = sess.run([k_update, m_global])
+                kt, mGlobal, iteration = sess.run([k_update, m_global, global_step])
                 print("kt: %.8f Mglobal: %.8f" % (kt, mGlobal))
                 summary_str = sess.run(summary)
                 summary_writer.add_summary(summary_str, iteration)
@@ -232,6 +249,9 @@ def train(batch_size, epochs, dataset, log_dir):
                 if iteration % lr_update_step == lr_update_step - 1:
                     sess.run([g_lr_update, d_lr_update])
 
+                if iteration % 500 == 0:
+                    tf.logging.info('Saving checkpoint')
+                    saver.save(sess, args.checkpoint_path + "/checkpoint", global_step=global_step)
 
                 # ##========================= evaluate data =========================###
 
@@ -243,6 +263,21 @@ def train(batch_size, epochs, dataset, log_dir):
 
 
 if __name__ == '__main__':
-    data_path = "/storage/dataset_videos/audio2faces_dataset/"
-    log_dir = "./logs"
-    train(batch_size=16, epochs=10, dataset=DataInput(data_path, "train"), log_dir=log_dir)
+
+    parser = argparse.ArgumentParser(description='Predict script')
+    parser.add_argument('-dataset_folder', default=DEFAULT_DATA_PATH, help='Path to the images file')
+    parser.add_argument('-checkpoint_dir', default=DEFAULT_CHECKPOINT_DIR, help='Model checkpoint to use')
+    parser.add_argument('-log_dir', default=DEFAULT_LOG_DIR, help='Model checkpoint to use')
+    parser.add_argument('-resume', default="True", help='Resume training ("True" or "False")')
+
+    args = parser.parse_args()
+
+    if args.resume == "False":
+        if tf.gfile.Exists(args.log_dir):
+            tf.gfile.DeleteRecursively(args.log_dir)
+        tf.gfile.MakeDirs(args.log_dir)
+
+    if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
+        os.mkdir(os.path.dirname(args.checkpoint_dir))
+
+    train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_folder, "train"), log_dir=args.log_dir)
