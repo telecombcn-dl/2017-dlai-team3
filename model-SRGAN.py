@@ -74,26 +74,26 @@ def generator(gen_input, reuse, batch_size, nb = 6, hidden_number=64, kernel=3, 
         x = Conv2dLayer(x, shape=[kernel, kernel, 32, 64], act=lrelu1, strides=[1, 1, 1, 1],
                         padding='SAME', W_init=w_init, name='conv1-ub/1')
         x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling1')
-        x = Conv2dLayer(InputLayer(x, name='in ub1 conv2'), shape=[kernel, kernel, 64, 64], act=lrelu1,
+        x = Conv2dLayer(x, shape=[kernel, kernel, 64, 64], act=lrelu1,
                         strides=[1, 1, 1, 1],
                         padding='SAME', W_init=w_init, name='conv2-ub/1')
         # upscaling block 2
-        x = Conv2dLayer(x, shape=[kernel, kernel, 32, 64], act=lrelu1, strides=[1, 1, 1, 1],
+        x = Conv2dLayer(x, shape=[kernel, kernel, 64, 64], act=lrelu1, strides=[1, 1, 1, 1],
                         padding='SAME', W_init=w_init, name='conv1-ub/2')
         x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling2')
-        x = Conv2dLayer(InputLayer(x, name='in ub2 conv2'), shape=[kernel, kernel, 64, 64], act=lrelu1,
+        x = Conv2dLayer(x, shape=[kernel, kernel, 64, 64], act=lrelu1,
                         strides=[1, 1, 1, 1],
                         padding='SAME', W_init=w_init, name='conv2-ub/2')
         # upscaling block 3
-        x = Conv2dLayer(x, shape=[kernel, kernel, 32, 64], act=lrelu1, strides=[1, 1, 1, 1],
+        x = Conv2dLayer(x, shape=[kernel, kernel, 64, 64], act=lrelu1, strides=[1, 1, 1, 1],
                         padding='SAME', W_init=w_init, name='conv1-ub/3')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling2')
-        x = Conv2dLayer(InputLayer(x, name='in ub3 conv3'), shape=[kernel, kernel, 64, 64], act=lrelu1,
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling3')
+        x = Conv2dLayer(x, shape=[kernel, kernel, 64, 64], act=lrelu1,
                         strides=[1, 1, 1, 1],
                         padding='SAME', W_init=w_init, name='conv2-ub/3')
 
 
-        x = Conv3dLayer(x, shape=[kernel, kernel, 64, 1], strides=[1, 1, 1, 1],
+        x = Conv2dLayer(x, shape=[kernel, kernel, 64, 3], strides=[1, 1, 1, 1],
                         act=tf.nn.tanh, padding='SAME', W_init=w_init, name='convlast')
 
         return x
@@ -195,9 +195,10 @@ def train(batch_size, epochs, dataset, log_dir):
     tf.summary.scalar('learning rate', learning_rate)
 
     summary = tf.summary.merge_all()
-    config = tf.ConfigProto(device_count={'GPU': 1})
+    #gpu_options = tf.GPUOptions(visible_device_list="1")
+    #config = tf.ConfigProto(gpu_options=gpu_options)
 
-    with tf.Session(config) as sess:
+    with tf.Session() as sess:
         # Summary writer to save logs
         summary_writer = tf.summary.FileWriter(os.path.join(log_dir, 'train'), sess.graph)
 
