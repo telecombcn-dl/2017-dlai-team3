@@ -9,6 +9,9 @@ DEFAULT_DATA_PATH = "/storage/dataset_videos/audio2faces_dataset/"
 DEFAULT_LOG_DIR = "/storage/logs"
 DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
 
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 def restore_model(sess):
     # Get the state of the checkpoint and then restore using ckpt path
