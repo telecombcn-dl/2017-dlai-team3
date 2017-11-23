@@ -138,7 +138,7 @@ def train(batch_size, epochs, dataset, log_dir):
         lr = tf.Variable(1e-4, trainable=False)
     global_step = tf.Variable(0, trainable=False)
     decay_rate = 0.5
-    decay_steps = 116722*10 ^ 2  # aprox 583.6K steps each epoch
+    decay_steps = 116722
     learning_rate = tf.train.inverse_time_decay(lr, global_step=global_step, decay_rate=decay_rate,
                                                 decay_steps=decay_steps)
 
