@@ -205,7 +205,7 @@ def train(batch_size, epochs, dataset, log_dir):
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
 
     d_loss = d_loss_real - k_t * d_loss_fake
-    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
+    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen)) + 10e-2 * tf.losses.mean_squared_error(output_gen, images)
     g_optim = tf.train.AdamOptimizer(g_lr).minimize(g_loss, var_list=g_vars)
     d_optim = tf.train.AdamOptimizer(d_lr).minimize(d_loss, var_list=d_vars)
 

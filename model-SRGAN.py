@@ -166,7 +166,7 @@ def train(batch_size, epochs, dataset, log_dir):
         lr = tf.Variable(1e-4, trainable=False)
     global_step = tf.Variable(0, trainable=False)
     decay_rate = 0.5
-    decay_steps = 116722*10 ^ 2  # aprox 583.6K steps each epoch
+    decay_steps = 116722
     learning_rate = tf.train.inverse_time_decay(lr, global_step=global_step, decay_rate=decay_rate,
                                                 decay_steps=decay_steps)
 
@@ -184,8 +184,10 @@ def train(batch_size, epochs, dataset, log_dir):
     d_loss_fake = tf.reduce_mean(tf.square(net_d_false - smooth_gan_labels(y_gan_fake)),
                                  name='d_loss_fake')
     d_loss = d_loss_real + d_loss_fake
-    g_loss = tf.reduce_mean(tf.square(net_d_false - smooth_gan_labels(tf.ones_like(net_d_false))),
+    g_gan_loss = tf.reduce_mean(tf.square(net_d_false - smooth_gan_labels(tf.ones_like(net_d_false))),
                                         name='g_loss_gan')
+    g_mse_loss = tf.losses.mean_squared_error(net_gen.outputs, images_normalized)
+    g_loss = 10e-2 * g_gan_loss + g_mse_loss
     g_optim = tf.train.AdamOptimizer(learning_rate).minimize(g_loss, var_list=g_vars)
     d_optim = tf.train.AdamOptimizer(learning_rate).minimize(d_loss, var_list=d_vars)
 
