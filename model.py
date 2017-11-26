@@ -1,4 +1,5 @@
 import tensorlayer as tl
+import tensorflow as tf
 import os
 from tensorlayer.layers import *
 from data_input import DataInput
@@ -9,9 +10,11 @@ DEFAULT_DATA_PATH = "/storage/dataset_videos/audio2faces_dataset/"
 DEFAULT_LOG_DIR = "/storage/logs"
 DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
 
-#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
+from tensorflow.python.client import device_lib
+print device_lib.list_local_devices()
 
 def restore_model(sess):
     # Get the state of the checkpoint and then restore using ckpt path
@@ -193,13 +196,11 @@ def train(batch_size, epochs, dataset, log_dir):
     g_vars = tl.layers.get_variables_with_name('generator', True, True)
     d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
     with tf.variable_scope('learning_rate'):
-        g_lr = tf.Variable(0.00008, trainable=False)
-        d_lr = tf.Variable(0.00008, trainable=False)
+        lr = tf.Variable(0.00008, trainable=False)
 
-    lr_lower_boundary=0.00002
-
-    g_lr_update = tf.assign(g_lr, tf.maximum(g_lr * 0.5, lr_lower_boundary), name='g_lr_update')
-    d_lr_update = tf.assign(d_lr, tf.maximum(d_lr * 0.5, lr_lower_boundary), name='d_lr_update')
+    decay_rate = 0.5
+    decay_steps = 116722
+    learning_rate = tf.train.inverse_time_decay(lr, decay_rate=decay_rate, decay_steps=decay_steps, global_step=global_step)
 
 
     d_loss_real = tf.reduce_mean(tf.abs(ae_real-images))
@@ -207,8 +208,8 @@ def train(batch_size, epochs, dataset, log_dir):
 
     d_loss = d_loss_real - k_t * d_loss_fake
     g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
-    g_optim = tf.train.AdamOptimizer(g_lr).minimize(g_loss, var_list=g_vars)
-    d_optim = tf.train.AdamOptimizer(d_lr).minimize(d_loss, var_list=d_vars)
+    g_optim = tf.train.AdamOptimizer(learning_rate).minimize(g_loss, var_list=g_vars, global_step=global_step)
+    d_optim = tf.train.AdamOptimizer(learning_rate).minimize(d_loss, var_list=d_vars, global_step=global_step)
 
     balance = gamma*d_loss_real-g_loss
     with tf.control_dependencies([d_optim, g_optim]):
@@ -229,35 +230,30 @@ def train(batch_size, epochs, dataset, log_dir):
         sess.run(init_op)
 
         if args.resume == "True":
+            print("Restoring model from checkpoint")
             restore_model(sess)
 
         # Coordinate the different workers for the input data pipeline
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
 
-
         try:
             iteration = 0
-            lr_update_step = 100000
             while not coord.should_stop():
                 iteration += 1
                 # ##========================= train SRGAN =========================###
                 kt, mGlobal, iteration = sess.run([k_update, m_global, global_step])
-                print("kt: %.8f Mglobal: %.8f" % (kt, mGlobal))
+                print("iteration: %2d kt: %.8f Mglobal: %.8f" % (iteration, kt, mGlobal))
                 summary_str = sess.run(summary)
                 summary_writer.add_summary(summary_str, iteration)
 
                 summary_writer.flush()
 
-                # ##========================= update learning rate =========================###
-                if iteration % lr_update_step == lr_update_step - 1:
-                    sess.run([g_lr_update, d_lr_update])
-
-                if iteration % 500 == 0:
+                # ##========================= save checkpoint =========================###
+                if iteration % 200 == 0 and iteration > 0:
                     tf.logging.info('Saving checkpoint')
-                    saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=global_step)
+                    saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
 
-                # ##========================= evaluate data =========================###
 
         except tf.errors.OutOfRangeError:
             print('Done -- epoch limit reached')
@@ -276,12 +272,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.resume == "False":
-        if tf.gfile.Exists(args.log_dir):
-            tf.gfile.DeleteRecursively(args.log_dir)
-        tf.gfile.MakeDirs(args.log_dir)
+    # if args.resume == "False":
+    #     if tf.gfile.Exists(args.log_dir):
+    #         tf.gfile.DeleteRecursively(args.log_dir)
+    #     tf.gfile.MakeDirs(args.log_dir)
 
-    if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
-        os.mkdir(os.path.dirname(args.checkpoint_dir))
+    # if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
+    #     os.mkdir(os.path.dirname(args.checkpoint_dir))
 
     train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_folder, "train"), log_dir=args.log_dir)

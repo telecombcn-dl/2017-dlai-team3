@@ -86,8 +86,7 @@ def discriminator(disc_input, reuse, batch_size, z_num=64, hidden_number=128, ke
                         W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv2')
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 2 * hidden_number], strides=[1, 1, 1, 1],
-                        padding='SAME',
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 2 * hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv3')
         x = Conv2dLayer(x, shape=[kernel, kernel, 2 * hidden_number, 2 * hidden_number], strides=[1, 2, 2, 1],
                         padding='SAME',

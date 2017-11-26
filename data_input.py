@@ -8,7 +8,8 @@ AUDIO_HEIGHT = 35
 def _read_item(face_queue, audio_queue):
     reader = tf.WholeFileReader()
     _, face_image = reader.read(face_queue)
-    _, audio_image = reader.read(audio_queue)
+    #_, audio_image = reader.read(audio_queue)
+    _, audio_MFCC = reader.read(audio_queue)
 
 
     with tf.name_scope('decode_face_image'):
@@ -16,12 +17,13 @@ def _read_item(face_queue, audio_queue):
         face_image = tf.to_float(face_image)
         face_image = tf.reshape(face_image, [64, 64, 3])
 
-    with tf.name_scope('decode_audio_image'):
-        audio_image = tf.image.decode_jpeg(audio_image, channels=1)
-        audio_image = tf.to_float(audio_image)
-        audio_image = tf.reshape(audio_image, [AUDIO_HEIGHT, AUDIO_WIDTH, 1])
+    # with tf.name_scope('decode_audio_image'):
+    #     audio_image = tf.image.decode_jpeg(audio_image, channels=1)
+    #     audio_image = tf.to_float(audio_image)
+    #     audio_image = tf.reshape(audio_image, [AUDIO_HEIGHT, AUDIO_WIDTH, 1])
 
-    return face_image, audio_image
+
+    return face_image, audio_MFCC
 
 
 def _create_batch(example, batch_size, num_threads):
@@ -51,7 +53,7 @@ class DataInput(object):
                            if os.path.isfile(os.path.join(self.path, f)) and
                            '_face_' in f]
 
-        audio_image_list = [item.replace("_face_", "_spectogram_") for item in face_image_list]
+        audio_image_list = [item.replace("_face_", "_MFCC_") for item in face_image_list]
 
         return face_image_list, audio_image_list
 
@@ -73,9 +75,9 @@ if __name__ == '__main__':
         threads = tf.train.start_queue_runners(coord=coord)
 
         for i in range(1):
-            face_image_value, audio_image_value = sess.run([face_image, audio_image])
+            face_image_value, audio_MFCC = sess.run([face_image, audio_image])
             print face_image_value[0].shape
-            print audio_image_value[0]
+            print audio_MFCC[0].shape
 
         coord.request_stop()
         coord.join(threads)
