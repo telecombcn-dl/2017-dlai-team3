@@ -273,24 +273,37 @@ def train(batch_size, epochs, dataset, log_dir):
         # threads = tf.train.start_queue_runners(coord=coord)
 
         iteration = 0
-
+        items_faces, items_audio = dataset.get_items()
+        import time
         for j in range(0, epochs):
-            input_images, audio_MFCC = dataset.input_images_audios(batch_size=batch_size, iteration=iteration)
-            print(input_images.shape)
-            print(audio_MFCC.shape)
-            # ##========================= train SRGAN =========================###
-            kt, mGlobal = sess.run([k_update, m_global], feed_dict={images: input_images, audio: audio_MFCC})
-            print("Iteration: %2d kt: %.8f Mglobal: %.8f." % (iteration, kt, mGlobal))
-            summary_str = sess.run(summary)
-            summary_writer.add_summary(summary_str, iteration)
+            while iteration * batch_size < len(items_faces):
+                print("Batch size is: {}".format(batch_size))
+                input_images = np.empty([batch_size, 64, 64, 3])
+                audio_MFCC = np.empty([batch_size, 35, 12, 1])
+                count = 0
+                for face, input_audio in zip(items_faces[iteration * batch_size:iteration * batch_size + batch_size],
+                                       items_audio[iteration * batch_size:iteration * batch_size + batch_size]):
+                    input_image = Image.open(face)
+                    input_image = np.asarray(input_image, dtype=float)
+                    input_images[count] = input_image
+                    input_audio = np.load(input_audio)
+                    input_audio = np.asarray(input_audio, dtype=float)
+                    audio_MFCC[count] = input_audio[:, :, np.newaxis]
+                    count += 1
+                print(input_images.shape)
+                print(audio_MFCC.shape)
+                # ##========================= train SRGAN =========================###
+                kt, mGlobal, summary_str = sess.run([k_update, m_global, summary], feed_dict={images: input_images, audio: audio_MFCC})
+                print("Iteration: %2d kt: %.8f Mglobal: %.8f." % (iteration, kt, mGlobal))
+                summary_writer.add_summary(summary_str, iteration)
 
-            summary_writer.flush()
+                # summary_writer.flush()
 
-            # ##========================= save checkpoint =========================###
-            if iteration % 200 == 0 and iteration > 0:
-                tf.logging.info('Saving checkpoint')
-                saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
-            iteration += 1
+                # ##========================= save checkpoint =========================###
+                if iteration % 200 == 0 and iteration > 0:
+                    tf.logging.info('Saving checkpoint')
+                    saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
+                iteration += 1
 
         # except tf.errors.OutOfRangeError:
         #     print('Done -- epoch limit reached')

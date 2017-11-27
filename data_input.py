@@ -60,7 +60,7 @@ class DataInput(object):
                 example = _read_item(face_queue, audio_queue)
                 return _create_batch(example, batch_size, num_threads)
 
-    def _get_input_queue_items(self):
+    def get_items(self):
         print("Called input queue")
         face_image_list = [os.path.join(self.path, f) for f in os.listdir(self.path)
                            if os.path.isfile(os.path.join(self.path, f)) and
@@ -68,29 +68,11 @@ class DataInput(object):
 
         audio_image_list = [(item.replace("_face_", "_MFCC_")) for item in face_image_list]
         audio_image_list = [(item.replace(".jpg", ".npy")) for item in audio_image_list]
-        print(len(face_image_list))
-        print(len(face_image_list)/16)
-        print(int(len(face_image_list) / 16))
-
+        # print(len(face_image_list))
+        # print(len(face_image_list)/16)
+        # print(int(len(face_image_list) / 16))
 
         return face_image_list, audio_image_list
-
-    def input_images_audios(self, batch_size, iteration):
-        print("Called input images audio")
-        items_faces, items_audio = self._get_input_queue_items()
-        faces = np.empty([batch_size, 64, 64, 3])
-        audios = np.empty([batch_size, 35, 12, 1])
-        count = 0
-        for face, audio in zip(items_faces[iteration*batch_size:iteration*batch_size+batch_size],
-                               items_audio[iteration*batch_size:iteration*batch_size+batch_size]):
-            image = Image.open(face)
-            image = np.asarray(image, dtype=float)
-            faces[count] = image
-            audio = np.load(audio)
-            audio = np.asarray(audio, dtype=float)
-            audios[count] = audio[:, :, np.newaxis]
-            count += 1
-        return faces, audios
 
 
 if __name__ == '__main__':
