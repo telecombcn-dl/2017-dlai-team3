@@ -5,20 +5,49 @@ from tensorlayer.layers import *
 from data_input import DataInput
 from utils import norm_img, denorm_img
 import argparse
+from PIL import Image
 
-DEFAULT_DATA_PATH = "/storage/dataset_videos/audio2faces_dataset/"
+DEFAULT_DATA_PATH = "/storage/dataset"
 DEFAULT_LOG_DIR = "/storage/logs"
 DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
 
+
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 from tensorflow.python.client import device_lib
 print device_lib.list_local_devices()
 
+def list_input_data():
+    print("Called input queue")
+    face_image_list = [os.path.join(DEFAULT_DATA_PATH, f) for f in os.listdir(DEFAULT_DATA_PATH)
+                       if os.path.isfile(os.path.join(DEFAULT_DATA_PATH, f)) and
+                       '_face_' in f]
+
+    audio_MFCC_list = [(item.replace("_face_", "_MFCC_")) for item in face_image_list]
+    audio_MFCC_list = [(item.replace(".jpg", ".npy")) for item in audio_MFCC_list]
+
+    return face_image_list, audio_MFCC_list
+def create_batch(batch_size, iteration):
+    face_image_list, audio_MFCC_list = list_input_data()
+    faces = np.empty([batch_size, 64, 64, 3])
+    audios = np.empty([batch_size, 35, 12, 1])
+    count = 0
+    for face, audio in zip(face_image_list[iteration * batch_size:iteration * batch_size + batch_size],
+                           audio_MFCC_list[iteration * batch_size:iteration * batch_size + batch_size]):
+        image = Image.open(face)
+        image = np.asarray(image, dtype=float)
+        faces[count] = image
+        audio = np.load(audio)
+        audio = np.asarray(audio, dtype=float)
+        audios[count] = audio[:, :, np.newaxis]
+        count += 1
+    return faces, audio
+
+
 def restore_model(sess):
     # Get the state of the checkpoint and then restore using ckpt path
-    ckpt = tf.train.get_checkpoint_state(args.checkpoint_path)
+    ckpt = tf.train.get_checkpoint_state(args.checkpoint_dir)
 
     if args.checkpoint_dir is not None:
         restorer = tf.train.Saver()
@@ -168,19 +197,25 @@ def discriminator(disc_input, reuse, batch_size, z_num=64, hidden_number=128, ke
 
 def train(batch_size, epochs, dataset, log_dir):
     global_step = tf.Variable(0, name='global_step', trainable=False)
+    image_width = 64
+    image_height = 64
+    audio_width = 12
+    audio_height = 35
 
-    # ##========================== DEFINE PIPELINE ============================###
-    images, audio = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
+    # ##========================== DEFINE INPUT DATA ============================###
+    images = tf.placeholder('float32', [batch_size, image_height, image_width, 3],
+                                 name='t_image_generator')
+    audio = tf.placeholder('float32', [batch_size, audio_height, audio_width, 1],
+                                 name='t_audio_input_generator')
     tf.summary.image('input_image', images)
-    tf.summary.image('audio_images', audio)
     images_normalized = norm_img(images)  # Normalization
-    tf.summary.image('norm_input_image', images_normalized)
 
     # ##========================== DEFINE MODEL ============================###
     net_gen = generator(gen_input=audio, batch_size=batch_size, reuse=False)
     tf.summary.image('norm_generated_image', net_gen.outputs)
     tf.summary.image('generated_image', denorm_img(net_gen.outputs))
-    net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), batch_size=batch_size, reuse=False)
+    net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0),
+                               batch_size=batch_size, reuse=False)
     net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
     tf.summary.image('autoencoder_real', denorm_img(net_d_real))
     tf.summary.image('autoencoder_fake', denorm_img(net_d_false))
@@ -200,8 +235,8 @@ def train(batch_size, epochs, dataset, log_dir):
 
     decay_rate = 0.5
     decay_steps = 116722
-    learning_rate = tf.train.inverse_time_decay(lr, decay_rate=decay_rate, decay_steps=decay_steps, global_step=global_step)
-
+    learning_rate = tf.train.inverse_time_decay(lr, decay_rate=decay_rate, decay_steps=decay_steps,
+                                                global_step=global_step)
 
     d_loss_real = tf.reduce_mean(tf.abs(ae_real-images))
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
@@ -234,33 +269,34 @@ def train(batch_size, epochs, dataset, log_dir):
             restore_model(sess)
 
         # Coordinate the different workers for the input data pipeline
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
+        # coord = tf.train.Coordinator()
+        # threads = tf.train.start_queue_runners(coord=coord)
 
-        try:
-            iteration = 0
-            while not coord.should_stop():
-                iteration += 1
-                # ##========================= train SRGAN =========================###
-                kt, mGlobal, iteration = sess.run([k_update, m_global, global_step])
-                print("iteration: %2d kt: %.8f Mglobal: %.8f" % (iteration, kt, mGlobal))
-                summary_str = sess.run(summary)
-                summary_writer.add_summary(summary_str, iteration)
+        iteration = 0
 
-                summary_writer.flush()
+        for j in range(0, epochs):
+            input_images, audio_MFCC = dataset.input_images_audios(batch_size=batch_size, iteration=iteration)
+            print(input_images.shape)
+            print(audio_MFCC.shape)
+            # ##========================= train SRGAN =========================###
+            kt, mGlobal = sess.run([k_update, m_global], feed_dict={images: input_images, audio: audio_MFCC})
+            print("Iteration: %2d kt: %.8f Mglobal: %.8f." % (iteration, kt, mGlobal))
+            summary_str = sess.run(summary)
+            summary_writer.add_summary(summary_str, iteration)
 
-                # ##========================= save checkpoint =========================###
-                if iteration % 200 == 0 and iteration > 0:
-                    tf.logging.info('Saving checkpoint')
-                    saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
+            summary_writer.flush()
 
+            # ##========================= save checkpoint =========================###
+            if iteration % 200 == 0 and iteration > 0:
+                tf.logging.info('Saving checkpoint')
+                saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
+            iteration += 1
 
-        except tf.errors.OutOfRangeError:
-            print('Done -- epoch limit reached')
-        finally:
-            coord.request_stop()
-            coord.join(threads)
-
+        # except tf.errors.OutOfRangeError:
+        #     print('Done -- epoch limit reached')
+        # finally:
+        #     coord.request_stop()
+        #     coord.join(threads)
 
 if __name__ == '__main__':
 
@@ -280,4 +316,4 @@ if __name__ == '__main__':
     # if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
     #     os.mkdir(os.path.dirname(args.checkpoint_dir))
 
-    train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_folder, "train"), log_dir=args.log_dir)
+    train(batch_size=1, epochs=10, dataset=DataInput(args.dataset_folder, "train"), log_dir=args.log_dir)

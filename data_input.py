@@ -1,8 +1,16 @@
 import tensorflow as tf
 import os
+from PIL import Image
+import numpy as np
 
 AUDIO_WIDTH = 12
 AUDIO_HEIGHT = 35
+path = "/storage/dataset_videos/audio2faces_dataset/"
+
+def get_input_items(iteration, batch_size, path):
+    dataset = DataInput(data_path, "train")
+
+
 
 
 def _read_item(face_queue, audio_queue):
@@ -22,7 +30,11 @@ def _read_item(face_queue, audio_queue):
     #     audio_image = tf.to_float(audio_image)
     #     audio_image = tf.reshape(audio_image, [AUDIO_HEIGHT, AUDIO_WIDTH, 1])
 
+    with tf.name_scope('decode_audio_MFCC'):
+        audio_MFCC = tf.decode_raw(audio_MFCC, out_type=tf.float64)
+        audio_MFCC = tf.reshape(audio_MFCC, [AUDIO_HEIGHT, AUDIO_WIDTH, 1])
 
+    print(audio_MFCC.shape)
     return face_image, audio_MFCC
 
 
@@ -49,35 +61,62 @@ class DataInput(object):
                 return _create_batch(example, batch_size, num_threads)
 
     def _get_input_queue_items(self):
+        print("Called input queue")
         face_image_list = [os.path.join(self.path, f) for f in os.listdir(self.path)
                            if os.path.isfile(os.path.join(self.path, f)) and
                            '_face_' in f]
 
-        audio_image_list = [item.replace("_face_", "_MFCC_") for item in face_image_list]
+        audio_image_list = [(item.replace("_face_", "_MFCC_")) for item in face_image_list]
+        audio_image_list = [(item.replace(".jpg", ".npy")) for item in audio_image_list]
+        print(len(face_image_list))
+        print(len(face_image_list)/16)
+        print(int(len(face_image_list) / 16))
+
 
         return face_image_list, audio_image_list
+
+    def input_images_audios(self, batch_size, iteration):
+        print("Called input images audio")
+        items_faces, items_audio = self._get_input_queue_items()
+        faces = np.empty([batch_size, 64, 64, 3])
+        audios = np.empty([batch_size, 35, 12, 1])
+        count = 0
+        for face, audio in zip(items_faces[iteration*batch_size:iteration*batch_size+batch_size],
+                               items_audio[iteration*batch_size:iteration*batch_size+batch_size]):
+            image = Image.open(face)
+            image = np.asarray(image, dtype=float)
+            faces[count] = image
+            audio = np.load(audio)
+            audio = np.asarray(audio, dtype=float)
+            audios[count] = audio[:, :, np.newaxis]
+            count += 1
+        return faces, audios
 
 
 if __name__ == '__main__':
 
-    data_path = "/storage/dataset_videos/audio2faces_dataset/"
+    data_path = "/storage/dataset"
 
     dataset = DataInput(data_path, "train")
 
-    face_image, audio_image = dataset.input_pipeline(batch_size=1, num_epochs=1, shuffle=False)
+    face_image, audio_MFCC = dataset.input_images_audios(batch_size=1, iteration=0)
+    print(face_image[0].shape)
+    print(audio_MFCC[0].shape)
 
-    with tf.Session() as sess:
-        init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-        sess.run(init_op)
-
-        # Coordinate the different workers for the input data pipeline
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
-
-        for i in range(1):
-            face_image_value, audio_MFCC = sess.run([face_image, audio_image])
-            print face_image_value[0].shape
-            print audio_MFCC[0].shape
-
-        coord.request_stop()
-        coord.join(threads)
+    # face_image, audio_MFCC = dataset.input_pipeline(batch_size=1, num_epochs=1, shuffle=False)
+    #
+    # with tf.Session() as sess:
+    #     init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+    #     sess.run(init_op)
+    #
+    #     # Coordinate the different workers for the input data pipeline
+    #     coord = tf.train.Coordinator()
+    #     threads = tf.train.start_queue_runners(coord=coord)
+    #
+    #     for i in range(1):
+    #         face_image_value, audio_MFCC = sess.run([face_image, audio_MFCC])
+    #         print face_image_value[0].shape
+    #         print audio_MFCC[0]
+    #
+    #     coord.request_stop()
+    #     coord.join(threads)
