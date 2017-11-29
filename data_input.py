@@ -1,6 +1,8 @@
 import tensorflow as tf
 import os
 from PIL import Image
+import tensorlayer as tl
+from tensorlayer.layers import *
 import numpy as np
 
 AUDIO_WIDTH = 12
@@ -61,18 +63,35 @@ class DataInput(object):
                 return _create_batch(example, batch_size, num_threads)
 
     def get_items(self):
-        print("Called input queue")
-        face_image_list = [os.path.join(self.path, f) for f in os.listdir(self.path)
+
+        audio_list = [os.path.join(self.path, f) for f in os.listdir(self.path)
                            if os.path.isfile(os.path.join(self.path, f)) and
-                           '_face_' in f]
+                           '_MFCC_' in f]
 
-        audio_image_list = [(item.replace("_face_", "_MFCC_")) for item in face_image_list]
-        audio_image_list = [(item.replace(".jpg", ".npy")) for item in audio_image_list]
-        # print(len(face_image_list))
-        # print(len(face_image_list)/16)
-        # print(int(len(face_image_list) / 16))
+        image_list = [(item.replace("_MFCC_", "_face_")) for item in audio_list]
+        image_list = [(item.replace(".npy", ".jpg")) for item in image_list]
 
-        return face_image_list, audio_image_list
+
+
+        return image_list, audio_list
+
+    def input_images_audios(self, batch_size, iteration):
+        print("Called input images audio")
+        items_faces, items_audio = self.get_items()
+        print(len(items_faces))
+        faces = np.empty([batch_size, 64, 64, 3])
+        audios = np.empty([batch_size, 35, 12, 1])
+        count = 0
+        for face, audio in zip(items_faces[iteration*batch_size:iteration*batch_size+batch_size],
+                               items_audio[iteration*batch_size:iteration*batch_size+batch_size]):
+            image = Image.open(face)
+            image = np.asarray(image, dtype=float)
+            faces[count] = image
+            audio = np.load(audio)
+            audio = np.asarray(audio, dtype=float)
+            audios[count] = audio[:, :, np.newaxis]
+            count += 1
+        return faces, audios
 
 
 if __name__ == '__main__':
@@ -81,24 +100,35 @@ if __name__ == '__main__':
 
     dataset = DataInput(data_path, "train")
 
-    face_image, audio_MFCC = dataset.input_images_audios(batch_size=1, iteration=0)
-    print(face_image[0].shape)
-    print(audio_MFCC[0].shape)
+    face_image_list, audio_MFCC_list = dataset.get_items()
 
-    # face_image, audio_MFCC = dataset.input_pipeline(batch_size=1, num_epochs=1, shuffle=False)
-    #
-    # with tf.Session() as sess:
-    #     init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-    #     sess.run(init_op)
-    #
-    #     # Coordinate the different workers for the input data pipeline
-    #     coord = tf.train.Coordinator()
-    #     threads = tf.train.start_queue_runners(coord=coord)
-    #
-    #     for i in range(1):
-    #         face_image_value, audio_MFCC = sess.run([face_image, audio_MFCC])
-    #         print face_image_value[0].shape
-    #         print audio_MFCC[0]
-    #
-    #     coord.request_stop()
-    #     coord.join(threads)
+    print("_______________")
+    print(len(face_image_list))
+    print(len(audio_MFCC_list))
+    face_image, audio_MFCC = dataset.input_images_audios(batch_size=2, iteration=0)
+
+    with tf.Session() as sess:
+        init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+        sess.run(init_op)
+
+        # Coordinate the different workers for the input data pipeline
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
+        audio = tf.placeholder('float32', [None, 35, 12, 1],
+                               name='t_audio_input_generator')
+
+        for i in range(1):
+            x = InputLayer(audio, name="in_audio_features_extractor")
+            x = FlattenLayer(x, name='AudioFeatures/flatten')
+            audio_features = DenseLayer(x, n_units=512, name='AudioFeatures/dense1')
+            audio_concat = tf.concat([audio_features.outputs, tf.random_uniform(shape=[1, 256], minval=-1, maxval=1)], axis=1)
+            x = InputLayer(audio_concat, name="in_audio_features")
+            face_image_value, audio_MFCC, audio_concat = sess.run([face_image, audio_MFCC, audio_concat],
+                                                                  feed_dict={audio: audio_MFCC})
+
+            print face_image_value[0].shape
+            print audio_MFCC.shape[0]
+            #print audio_concat.shape[0]
+
+        # coord.request_stop()
+        # coord.join(threads)
