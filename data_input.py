@@ -49,8 +49,9 @@ def _create_batch(example, batch_size, num_threads):
 
 class DataInput(object):
 
-    def __init__(self, path, name):
-        self.path = path
+    def __init__(self, path_faces, path_audio, name):
+        self.path_faces = path_faces
+        self.path_audio = path_audio
         self.name = name
 
     def input_pipeline(self, batch_size, num_epochs, shuffle=False, num_threads=4):
@@ -63,15 +64,13 @@ class DataInput(object):
                 return _create_batch(example, batch_size, num_threads)
 
     def get_items(self):
+        image_list = [os.path.join(self.path_faces, f) for f in os.listdir(self.path_faces)
+                      if os.path.isfile(os.path.join(self.path_faces, f)) and
+                      '_face_' in f]
 
-        audio_list = [os.path.join(self.path, f) for f in os.listdir(self.path)
-                           if os.path.isfile(os.path.join(self.path, f)) and
-                           '_MFCC_' in f]
-
-        image_list = [(item.replace("_MFCC_", "_face_")) for item in audio_list]
-        image_list = [(item.replace(".npy", ".jpg")) for item in image_list]
-
-
+        audio_list = [(item.replace(self.path_faces, self.path_audio)) for item in image_list]
+        audio_list = [(item.replace("_face_", "_MFCC_")) for item in audio_list]
+        audio_list = [(item.replace(".jpg", ".npy")) for item in audio_list]
 
         return image_list, audio_list
 
@@ -96,9 +95,10 @@ class DataInput(object):
 
 if __name__ == '__main__':
 
-    data_path = "/storage/dataset"
+    data_path_faces = "/storage/dataset"
+    data_path_audios = "/storage/dataset_videos/cropped_videos/outputb"
 
-    dataset = DataInput(data_path, "train")
+    dataset = DataInput(data_path_faces, data_path_audios, "train")
 
     face_image_list, audio_MFCC_list = dataset.get_items()
 

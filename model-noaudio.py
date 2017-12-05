@@ -201,8 +201,8 @@ def train(batch_size, epochs, dataset, log_dir):
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
     d_loss = d_loss_real - k_t * d_loss_fake
 
-    g_loss_discriminativefeatures = tf.reduce_mean(tf.abs(d_z_real-d_z_false))
-    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen)) + 10e-2 * g_loss_discriminativefeatures
+
+    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
 
 
     g_optim = tf.train.RMSPropOptimizer(learning_rate= lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
@@ -215,7 +215,8 @@ def train(batch_size, epochs, dataset, log_dir):
     m_global = d_loss_real + tf.abs(balance)
 
     tf.summary.scalar('m_global', m_global)
-    tf.summary.scalar('g_loss_discriminativefeatures', g_loss_discriminativefeatures)
+    tf.summary.scalar('g_loss', g_loss)
+    tf.summary.scalar('d_loss', d_loss)
     tf.summary.scalar('k_t', k_t)
 
     summary = tf.summary.merge_all()
@@ -242,7 +243,7 @@ def train(batch_size, epochs, dataset, log_dir):
             while iteration * batch_size < len(items_faces):
                 input_images = np.empty([batch_size, 64, 64, 3])
                 count = 0
-                for face in zip(items_faces[iteration * batch_size:iteration * batch_size + batch_size]):
+                for face in items_faces[iteration * batch_size:iteration * batch_size + batch_size]:
                     input_image = Image.open(face)
                     input_image = np.asarray(input_image, dtype=float)
                     input_images[count] = input_image
@@ -266,7 +267,7 @@ def train(batch_size, epochs, dataset, log_dir):
             if rest > 0:
                 count = 0
                 input_images = np.empty([rest, 64, 64, 3])
-                for face in zip(items_faces[len(items_faces)-rest:]):
+                for face in items_faces[len(items_faces)-rest:]:
                     input_image = Image.open(face)
                     input_image = np.asarray(input_image, dtype=float)
                     input_images[count] = input_image

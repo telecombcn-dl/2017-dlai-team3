@@ -7,7 +7,8 @@ from utils import norm_img, denorm_img
 import argparse
 from PIL import Image
 
-DEFAULT_DATA_PATH = "/storage/dataset"
+DEFAULT_DATA_FACES_PATH = "/storage/dataset"
+DEFAULT_DATA_AUDIOS_PATH = "/storage/dataset_videos/cropped_videos/outputb"
 DEFAULT_LOG_DIR = "/storage/logs"
 DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
 
@@ -201,6 +202,7 @@ def train(batch_size, epochs, dataset, log_dir):
     tf.summary.image('generated_image', denorm_img(net_gen.outputs))
     net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
     net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
+    d_z_false, d_z_real = tf.split(d_z.outputs, num_or_size_splits=2, axis=0)
     tf.summary.image('autoencoder_real', denorm_img(net_d_real))
     tf.summary.image('autoencoder_fake', denorm_img(net_d_false))
 
@@ -224,9 +226,12 @@ def train(batch_size, epochs, dataset, log_dir):
 
     d_loss_real = tf.reduce_mean(tf.abs(ae_real-images))
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
-
     d_loss = d_loss_real - k_t * d_loss_fake
-    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
+
+    g_loss_discriminativefeatures = tf.reduce_mean(tf.abs(d_z_real-d_z_false))
+    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen)) + 10e-2 * g_loss_discriminativefeatures
+
+
     g_optim = tf.train.AdamOptimizer(learning_rate).minimize(g_loss, var_list=g_vars, global_step=global_step)
     d_optim = tf.train.AdamOptimizer(learning_rate).minimize(d_loss, var_list=d_vars, global_step=global_step)
 
@@ -237,6 +242,7 @@ def train(batch_size, epochs, dataset, log_dir):
     m_global = d_loss_real + tf.abs(balance)
 
     tf.summary.scalar('m_global', m_global)
+    tf.summary.scalar('g_loss_discriminativefeatures', g_loss_discriminativefeatures)
     tf.summary.scalar('k_t', k_t)
     tf.summary.scalar('learning_rate', learning_rate)
 
@@ -317,7 +323,8 @@ def train(batch_size, epochs, dataset, log_dir):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Predict script')
-    parser.add_argument('-dataset_folder', default=DEFAULT_DATA_PATH, help='Path to the images file')
+    parser.add_argument('-dataset_faces_folder', default=DEFAULT_DATA_FACES_PATH, help='Path to the images file')
+    parser.add_argument('-dataset_audios_folder', default=DEFAULT_DATA_AUDIOS_PATH, help='Path to the audios file')
     parser.add_argument('-checkpoint_dir', default=DEFAULT_CHECKPOINT_DIR, help='Model checkpoint to use')
     parser.add_argument('-log_dir', default=DEFAULT_LOG_DIR, help='Model checkpoint to use')
     parser.add_argument('-resume', default="True", help='Resume training ("True" or "False")')
@@ -332,4 +339,4 @@ if __name__ == '__main__':
     # if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
     #     os.mkdir(os.path.dirname(args.checkpoint_dir))
 
-    train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_folder, "train"), log_dir=args.log_dir)
+    train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_faces_folder, args.dataset_audios_folder, "train"), log_dir=args.log_dir)
