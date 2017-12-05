@@ -165,8 +165,6 @@ def train(batch_size, epochs, dataset, log_dir):
     global_step = tf.Variable(0, name='global_step', trainable=False)
     image_width = 64
     image_height = 64
-    audio_width = 12
-    audio_height = 35
 
     # ##========================== DEFINE INPUT DATA ============================###
     images = tf.placeholder('float32', [None, image_height, image_width, 3],
@@ -198,10 +196,6 @@ def train(batch_size, epochs, dataset, log_dir):
     with tf.variable_scope('learning_rate'):
         lr = tf.Variable(0.00008, trainable=False)
 
-    decay_rate = 0.5
-    decay_steps = 116722
-    learning_rate = tf.train.inverse_time_decay(lr, decay_rate=decay_rate, decay_steps=decay_steps,
-                                                global_step=global_step)
 
     d_loss_real = tf.reduce_mean(tf.abs(ae_real-images))
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
@@ -211,8 +205,8 @@ def train(batch_size, epochs, dataset, log_dir):
     g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen)) + 10e-2 * g_loss_discriminativefeatures
 
 
-    g_optim = tf.train.AdamOptimizer(learning_rate).minimize(g_loss, var_list=g_vars, global_step=global_step)
-    d_optim = tf.train.AdamOptimizer(learning_rate).minimize(d_loss, var_list=d_vars, global_step=global_step)
+    g_optim = tf.train.RMSPropOptimizer(learning_rate= lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
+    d_optim = tf.train.RMSPropOptimizer(learning_rate= lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
 
     balance = gamma*d_loss_real-g_loss
     with tf.control_dependencies([d_optim, g_optim]):
@@ -223,7 +217,6 @@ def train(batch_size, epochs, dataset, log_dir):
     tf.summary.scalar('m_global', m_global)
     tf.summary.scalar('g_loss_discriminativefeatures', g_loss_discriminativefeatures)
     tf.summary.scalar('k_t', k_t)
-    tf.summary.scalar('learning_rate', learning_rate)
 
     summary = tf.summary.merge_all()
     with tf.Session() as sess:
