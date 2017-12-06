@@ -1,5 +1,4 @@
 import tensorlayer as tl
-import tensorflow as tf
 import os
 from tensorlayer.layers import *
 from data_input import DataInput
@@ -14,30 +13,21 @@ DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
 
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 from tensorflow.python.client import device_lib
 print device_lib.list_local_devices()
 
 
-def restore_model(sess):
-    # define model
-    t_input_gen = tf.placeholder('float32', [None, 35, 12, 1], name='t_image_input_generator')
-    netw = generator(t_input_gen, reuse=True)
-    # sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=False))
-    saver = tf.train.Saver(tf.trainable_variables(scope="generator"))
-    # saver.restore(sess, DEFAULT_CHECKPOINT_DIR)
-
+def restore_model(sess, checkpoint_path):
     # Get the state of the checkpoint and then restore using ckpt path
-    ckpt = tf.train.get_checkpoint_state(args.checkpoint_dir)
+    ckpt = tf.train.get_checkpoint_state(checkpoint_path)
 
-    if args.checkpoint_dir is not None:
+    if checkpoint_path is not None:
         restorer = tf.train.Saver()
-        print(ckpt.model_checkpoint_path)
-        restorer.restore(sess, '/storage/checkpoints/checkpoint-4')
+        restorer.restore(sess, ckpt.model_checkpoint_path)
 
 
-# TODO: ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
 def generator(z, reuse, hidden_number=64, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
@@ -167,8 +157,7 @@ def train(batch_size, epochs, dataset, log_dir):
     image_height = 64
 
     # ##========================== DEFINE INPUT DATA ============================###
-    images = tf.placeholder('float32', [None, image_height, image_width, 3],
-                                 name='t_image_generator')
+    images = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_image_generator')
     z = tf.placeholder('float32', [None, 256], name='t_noise_generator')
     tf.summary.image('input_image', images)
     images_normalized = norm_img(images)  # Normalization
@@ -179,7 +168,6 @@ def train(batch_size, epochs, dataset, log_dir):
     tf.summary.image('generated_image', denorm_img(net_gen.outputs))
     net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
     net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
-    d_z_false, d_z_real = tf.split(d_z.outputs, num_or_size_splits=2, axis=0)
     tf.summary.image('autoencoder_real', denorm_img(net_d_real))
     tf.summary.image('autoencoder_fake', denorm_img(net_d_false))
 
@@ -196,17 +184,14 @@ def train(batch_size, epochs, dataset, log_dir):
     with tf.variable_scope('learning_rate'):
         lr = tf.Variable(0.00008, trainable=False)
 
-
     d_loss_real = tf.reduce_mean(tf.abs(ae_real-images))
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
     d_loss = d_loss_real - k_t * d_loss_fake
 
-
     g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
 
-
-    g_optim = tf.train.RMSPropOptimizer(learning_rate= lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
-    d_optim = tf.train.RMSPropOptimizer(learning_rate= lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
+    g_optim = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
+    d_optim = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
 
     balance = gamma*d_loss_real-g_loss
     with tf.control_dependencies([d_optim, g_optim]):
@@ -221,7 +206,7 @@ def train(batch_size, epochs, dataset, log_dir):
 
     summary = tf.summary.merge_all()
     with tf.Session() as sess:
-        saver = tf.train.Saver(max_to_keep=1, var_list=tf.trainable_variables())
+        saver = tf.train.Saver(max_to_keep=1)
         # Summary writer to save logs
         summary_writer = tf.summary.FileWriter(os.path.join(log_dir, 'train'), sess.graph)
 
@@ -230,11 +215,7 @@ def train(batch_size, epochs, dataset, log_dir):
 
         if args.resume == "True":
             print("Restoring model from checkpoint")
-            restore_model(sess)
-
-        # Coordinate the different workers for the input data pipeline
-        # coord = tf.train.Coordinator()
-        # threads = tf.train.start_queue_runners(coord=coord)
+            restore_model(sess, args.checkpoint_dir)
 
         items_faces, items_audio = dataset.get_items()
         total = 0
@@ -254,8 +235,6 @@ def train(batch_size, epochs, dataset, log_dir):
                                                     feed_dict={images: input_images, z: input_z})
                 print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
                 summary_writer.add_summary(summary_str, total)
-
-                # summary_writer.flush()
 
                 # ##========================= save checkpoint =========================###
                 if iteration % 3630 == 0 and iteration > 0:
@@ -280,12 +259,6 @@ def train(batch_size, epochs, dataset, log_dir):
                 summary_writer.add_summary(summary_str, iteration)
 
 
-        # except tf.errors.OutOfRangeError:
-        #     print('Done -- epoch limit reached')
-        # finally:
-        #     coord.request_stop()
-        #     coord.join(threads)
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Predict script')
@@ -297,12 +270,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # if args.resume == "False":
-    #     if tf.gfile.Exists(args.log_dir):
-    #         tf.gfile.DeleteRecursively(args.log_dir)
-    #     tf.gfile.MakeDirs(args.log_dir)
+    if args.resume == "False":
+        if tf.gfile.Exists(args.log_dir):
+            tf.gfile.DeleteRecursively(args.log_dir)
+        tf.gfile.MakeDirs(args.log_dir)
 
-    # if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
-    #     os.mkdir(os.path.dirname(args.checkpoint_dir))
+    if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
+        os.mkdir(os.path.dirname(args.checkpoint_dir))
 
-    train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_faces_folder, args.dataset_audios_folder, "train"), log_dir=args.log_dir)
+    train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_faces_folder, args.dataset_audios_folder,
+                                                      "train"), log_dir=args.log_dir)

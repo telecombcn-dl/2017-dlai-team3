@@ -7,30 +7,17 @@ import numpy as np
 
 AUDIO_WIDTH = 12
 AUDIO_HEIGHT = 35
-path = "/storage/dataset_videos/audio2faces_dataset/"
-
-def get_input_items(iteration, batch_size, path):
-    dataset = DataInput(data_path, "train")
-
-
 
 
 def _read_item(face_queue, audio_queue):
     reader = tf.WholeFileReader()
     _, face_image = reader.read(face_queue)
-    #_, audio_image = reader.read(audio_queue)
     _, audio_MFCC = reader.read(audio_queue)
-
 
     with tf.name_scope('decode_face_image'):
         face_image = tf.image.decode_jpeg(face_image, channels=3)
         face_image = tf.to_float(face_image)
         face_image = tf.reshape(face_image, [64, 64, 3])
-
-    # with tf.name_scope('decode_audio_image'):
-    #     audio_image = tf.image.decode_jpeg(audio_image, channels=1)
-    #     audio_image = tf.to_float(audio_image)
-    #     audio_image = tf.reshape(audio_image, [AUDIO_HEIGHT, AUDIO_WIDTH, 1])
 
     with tf.name_scope('decode_audio_MFCC'):
         audio_MFCC = tf.decode_raw(audio_MFCC, out_type=tf.float64)
@@ -94,7 +81,7 @@ class DataInput(object):
 
 
 if __name__ == '__main__':
-
+    path = "/storage/dataset_videos/audio2faces_dataset/"
     data_path_faces = "/storage/dataset"
     data_path_audios = "/storage/dataset_videos/cropped_videos/outputb"
 
