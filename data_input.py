@@ -56,7 +56,7 @@ class DataInput(object):
                       '_face_' in f]
 
         audio_list = [(item.replace(self.path_faces, self.path_audio)) for item in image_list]
-        audio_list = [(item.replace("_face_", "_MFCC_")) for item in audio_list]
+        audio_list = [(item.replace("_face_", "_MFCC2_")) for item in audio_list]
         audio_list = [(item.replace(".jpg", ".npy")) for item in audio_list]
 
         return image_list, audio_list
