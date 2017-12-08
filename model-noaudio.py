@@ -231,11 +231,13 @@ def train(batch_size, epochs, dataset, log_dir):
                     count += 1
                 input_z = np.random.uniform(-1., 1, size=[batch_size, 256])
                 # ##========================= train SRGAN =========================###
-                kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
+                kt, mGlobal = sess.run([k_update, m_global],
                                                     feed_dict={images: input_images, z: input_z})
                 print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
 
-                summary_writer.add_summary(summary_str, total)
+                if iteration % 20 == 0 and iteration > 0:
+                    summary_str = sess.run(summary)
+                    summary_writer.add_summary(summary_str, total)
 
                 # ##========================= save checkpoint =========================###
                 if iteration % 3000 == 0 and iteration > 0:
