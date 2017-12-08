@@ -11,11 +11,11 @@ DEFAULT_DATA_AUDIOS_PATH = "/storage/dataset_videos/cropped_videos/outputb"
 DEFAULT_LOG_DIR = "/storage/logs"
 DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
 
-
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow.python.client import device_lib
+
 print device_lib.list_local_devices()
 
 
@@ -41,30 +41,30 @@ def generator(z, reuse, hidden_number=64, kernel=3):
         # even better visual results
         # Down-sampling is implemented as sub-sampling with stride 2 and up- sampling is done by nearest neighbor.
         x = InputLayer(z, name="in")
-        x = DenseLayer(x, n_units=8*8*hidden_number, name='Generator/dense2')
+        x = DenseLayer(x, n_units=8 * 8 * hidden_number, name='Generator/dense2')
         arguments = {'shape': [-1, 8, 8, hidden_number], 'name': 'Generator/reshape1'}
         x = LambdaLayer(x, fn=tf.reshape, fn_args=arguments)
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1,1,1,1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv2')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling1') # method= 1 NN
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv1')
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv2')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling1')  # method= 1 NN
 
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv3')
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv3')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv4')
         x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Encoder/UpSampling2')  # method= 1 NN
 
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv5')
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv5')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv6')
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv6')
         x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling3')  # method= 1 NN
 
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1],
                         padding='SAME',
-                        W_init=w_init,act=tf.nn.elu, name='Generator/conv7')
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv7')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv8')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 3], strides=[1, 1, 1, 1], padding='SAME',
@@ -84,18 +84,21 @@ def discriminator(disc_input, reuse, z_num=64, hidden_number=128, kernel=3):
 
         x = InputLayer(disc_input, name='in')  # [1, height = 64, width = 64, 3 ]
         x = Conv2dLayer(x, shape=[kernel, kernel, 3, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init,act=tf.nn.elu, name='Discriminator/Encoder/conv1')
+                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init,act=tf.nn.elu, name='Discriminator/Encoder/conv2')
-        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 2*hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init,act=tf.nn.elu, name='Discriminator/Encoder/conv3')
-        x = Conv2dLayer(x, shape=[kernel, kernel, 2*hidden_number, 2*hidden_number], strides=[1, 2, 2, 1], padding='SAME',
-                        W_init=w_init,act=tf.nn.elu, name='Discriminator/Encoder/subsampling1')
+                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv2')
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 2 * hidden_number], strides=[1, 1, 1, 1],
+                        padding='SAME',
+                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv3')
+        x = Conv2dLayer(x, shape=[kernel, kernel, 2 * hidden_number, 2 * hidden_number], strides=[1, 2, 2, 1],
+                        padding='SAME',
+                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/subsampling1')
         # [1, height = 32, width = 32, 2*hidden_number]
 
-        x = Conv2dLayer(x, shape=[kernel, kernel, 2*hidden_number, 2*hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init,act=tf.nn.elu, name='Discriminator/Encoder/conv4')
-        x = Conv2dLayer(x, shape=[kernel, kernel, 2*hidden_number, 3 * hidden_number], strides=[1, 1, 1, 1],
+        x = Conv2dLayer(x, shape=[kernel, kernel, 2 * hidden_number, 2 * hidden_number], strides=[1, 1, 1, 1],
+                        padding='SAME',
+                        W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv4')
+        x = Conv2dLayer(x, shape=[kernel, kernel, 2 * hidden_number, 3 * hidden_number], strides=[1, 1, 1, 1],
                         padding='SAME', W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv5')
         x = Conv2dLayer(x, shape=[kernel, kernel, 3 * hidden_number, 3 * hidden_number], strides=[1, 2, 2, 1],
                         padding='SAME', W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/subsampling2')
@@ -111,7 +114,7 @@ def discriminator(disc_input, reuse, z_num=64, hidden_number=128, kernel=3):
         # [1, height = 8, width = 8, 4*hidden_number]
 
         x = Conv2dLayer(x, shape=[kernel, kernel, 4 * hidden_number, 4 * hidden_number], strides=[1, 1, 1, 1],
-                        padding='SAME',  W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv8')
+                        padding='SAME', W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv8')
         x = Conv2dLayer(x, shape=[kernel, kernel, 4 * hidden_number, 4 * hidden_number], strides=[1, 1, 1, 1],
                         padding='SAME', W_init=w_init, act=tf.nn.elu, name='Discriminator/Encoder/conv9')
 
@@ -163,7 +166,7 @@ def train(batch_size, epochs, dataset, log_dir):
     images_normalized = norm_img(images)  # Normalization
 
     # ##========================== DEFINE MODEL ============================###
-    net_gen = generator(z = z, reuse=False)
+    net_gen = generator(z=z, reuse=False)
     tf.summary.image('norm_generated_image', net_gen.outputs)
     tf.summary.image('generated_image', denorm_img(net_gen.outputs))
     net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
@@ -184,8 +187,8 @@ def train(batch_size, epochs, dataset, log_dir):
     with tf.variable_scope('learning_rate'):
         lr = tf.Variable(0.00008, trainable=False)
 
-    d_loss_real = tf.reduce_mean(tf.abs(ae_real-images))
-    d_loss_fake = tf.reduce_mean(tf.abs(ae_gen-output_gen))
+    d_loss_real = tf.reduce_mean(tf.abs(ae_real - images))
+    d_loss_fake = tf.reduce_mean(tf.abs(ae_gen - output_gen))
     d_loss = d_loss_real - k_t * d_loss_fake
 
     g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
@@ -193,7 +196,7 @@ def train(batch_size, epochs, dataset, log_dir):
     g_optim = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
     d_optim = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
 
-    balance = gamma*d_loss_real-g_loss
+    balance = gamma * d_loss_real - g_loss
     with tf.control_dependencies([d_optim, g_optim]):
         k_update = tf.assign(k_t, tf.clip_by_value(k_t + lambda_k * balance, 0, 1))
 
@@ -231,13 +234,14 @@ def train(batch_size, epochs, dataset, log_dir):
                     count += 1
                 input_z = np.random.uniform(-1., 1, size=[batch_size, 256])
                 # ##========================= train SRGAN =========================###
-                kt, mGlobal = sess.run([k_update, m_global],
-                                                    feed_dict={images: input_images, z: input_z})
-                print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
-
                 if iteration % 20 == 0 and iteration > 0:
-                    summary_str = sess.run(summary)
+                    kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
+                                                        feed_dict={images: input_images, z: input_z})
                     summary_writer.add_summary(summary_str, total)
+
+                kt, mGlobal = sess.run([k_update, m_global],
+                                       feed_dict={images: input_images, z: input_z})
+                print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
 
                 # ##========================= save checkpoint =========================###
                 if iteration % 3000 == 0 and iteration > 0:
@@ -245,11 +249,11 @@ def train(batch_size, epochs, dataset, log_dir):
                     saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
                 iteration += 1
                 total += 1
-            rest = len(items_faces) - ((iteration - 1)*batch_size)
+            rest = len(items_faces) - ((iteration - 1) * batch_size)
             if rest > 0:
                 count = 0
                 input_images = np.empty([rest, 64, 64, 3])
-                for face in items_faces[len(items_faces)-rest:]:
+                for face in items_faces[len(items_faces) - rest:]:
                     input_image = Image.open(face)
                     input_image = np.asarray(input_image, dtype=float)
                     input_images[count] = input_image
