@@ -180,7 +180,7 @@ def train(batch_size, epochs, dataset, log_dir):
     g_vars = tl.layers.get_variables_with_name('generator', True, True)
     d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
     with tf.variable_scope('learning_rate'):
-        lr = tf.Variable(0.0001, trainable=False)
+        lr = tf.Variable(0.00004, trainable=False)
 
     d_loss_real = tf.reduce_mean(tf.abs(ae_real - images))
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen - output_gen))
@@ -232,7 +232,8 @@ def train(batch_size, epochs, dataset, log_dir):
                 kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
                                        feed_dict={images: input_images, z: input_z})
                 summary_writer.add_summary(summary_str, total)
-                print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
+                if iteration % 16 == 0 and iteration > 0:
+                    print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
 
                 # ##========================= save checkpoint =========================###
                 if iteration % 3000 == 0 and iteration > 0:
@@ -249,7 +250,7 @@ def train(batch_size, epochs, dataset, log_dir):
                     input_image = np.asarray(input_image, dtype=float)
                     input_images[count] = input_image
                     count += 1
-                input_z = np.random.uniform(-1., 1, size=[rest, 256])
+                input_z = np.random.uniform(-1., 1, size=[rest, 64])
                 # ##========================= train SRGAN =========================###
                 kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
                                                     feed_dict={images: input_images, z: input_z})
@@ -276,5 +277,5 @@ if __name__ == '__main__':
     if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
         os.mkdir(os.path.dirname(args.checkpoint_dir))
 
-    train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_faces_folder, args.dataset_audios_folder,
+    train(batch_size=1, epochs=10, dataset=DataInput(args.dataset_faces_folder, args.dataset_audios_folder,
                                                       "train"), log_dir=args.log_dir)
