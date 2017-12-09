@@ -13,6 +13,14 @@ Once the videos were selected, we had to process them to obtain both the face an
 BLAH BLAH BLAH BLAH BLAH
 
 
+### AUDIO FEATURE EXTRACTION
+<img src="docs/6.png" alt="hi" class="inline"/>
+In order to train our network, we have also created our own dataset.
+First we extract videos from the youtube platform. We wanted to have well centered faces and with the cleanest audio possible, for that reason we chosed to download videos from Donald Trump public speeches.
+Once the videos were selected, we had to process them to obtain both the face and the audio corresponding to the face. 
+BLAH BLAH BLAH BLAH BLAH
+
+
 ### ARCHITECTURE
 The architecture proposed in the [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf) is quite different to the general way of building GANs. In this case, we have that the architecture used for the Discriminator network is an autoencoder, while the Generator has only the decoder part. In order to conditioned the Generator network to generate talking faces according to an audio segment, we input to the generator audio features instead of a random noise. Those features have been extracted from a CNN which had as an input the audio segment. This CNN is composed by: Conv (3x3,64) + Conv (3x3,128) + Pool(2)  + Conv (3x3,256) + Conv (3x3,512) + Dense(512) + 
 Dense (256).
