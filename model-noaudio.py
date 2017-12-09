@@ -188,8 +188,8 @@ def train(batch_size, epochs, dataset, log_dir):
 
     g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
 
-    g_optim = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
-    d_optim = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
+    g_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
+    d_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
 
     balance = gamma * d_loss_real - g_loss
     with tf.control_dependencies([d_optim, g_optim]):
