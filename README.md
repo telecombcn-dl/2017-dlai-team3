@@ -1,4 +1,4 @@
-## Welcome to GitHub Pages
+## DLAI TEAM 3
 
 You can use the [editor on GitHub](https://github.com/telecombcn-dl/2017-dlai-team3/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
 
