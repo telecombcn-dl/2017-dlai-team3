@@ -6,7 +6,7 @@ from tensorlayer.layers import *
 import numpy as np
 
 AUDIO_WIDTH = 12
-AUDIO_HEIGHT = 35
+AUDIO_HEIGHT = 60
 
 
 def _read_item(face_queue, audio_queue):
@@ -53,7 +53,7 @@ class DataInput(object):
     def get_items(self):
         image_list = [os.path.join(self.path_faces, f) for f in os.listdir(self.path_faces)
                       if os.path.isfile(os.path.join(self.path_faces, f)) and
-                      '_face_' in f]
+                      '_face_' in f and 'eMLs9XkrVj0' in f]
 
         audio_list = [(item.replace(self.path_faces, self.path_audio)) for item in image_list]
         audio_list = [(item.replace("_face_", "_MFCC2_")) for item in audio_list]
@@ -66,7 +66,7 @@ class DataInput(object):
         items_faces, items_audio = self.get_items()
         print(len(items_faces))
         faces = np.empty([batch_size, 64, 64, 3])
-        audios = np.empty([batch_size, 35, 12, 1])
+        audios = np.empty([batch_size, 60, 12, 1])
         count = 0
         for face, audio in zip(items_faces[iteration*batch_size:iteration*batch_size+batch_size],
                                items_audio[iteration*batch_size:iteration*batch_size+batch_size]):
@@ -101,7 +101,7 @@ if __name__ == '__main__':
         # Coordinate the different workers for the input data pipeline
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
-        audio = tf.placeholder('float32', [None, 35, 12, 1],
+        audio = tf.placeholder('float32', [None, 60, 12, 1],
                                name='t_audio_input_generator')
 
         for i in range(1):

@@ -14,9 +14,6 @@ DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-from tensorflow.python.client import device_lib
-
-print device_lib.list_local_devices()
 
 
 def restore_model(sess, checkpoint_path):
@@ -234,13 +231,9 @@ def train(batch_size, epochs, dataset, log_dir):
                     count += 1
                 input_z = np.random.uniform(-1., 1, size=[batch_size, 256])
                 # ##========================= train SRGAN =========================###
-                if iteration % 20 == 0 and iteration > 0:
-                    kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
-                                                        feed_dict={images: input_images, z: input_z})
-                    summary_writer.add_summary(summary_str, total)
-
-                kt, mGlobal = sess.run([k_update, m_global],
+                kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
                                        feed_dict={images: input_images, z: input_z})
+                summary_writer.add_summary(summary_str, total)
                 print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
 
                 # ##========================= save checkpoint =========================###
