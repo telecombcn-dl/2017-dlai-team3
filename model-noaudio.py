@@ -68,7 +68,7 @@ def generator(z, reuse, hidden_number=64, kernel=3):
         return x
 
 
-def discriminator(disc_input, reuse, z_num=64, hidden_number=128, kernel=3):
+def discriminator(disc_input, reuse, z_num=64, hidden_number=64, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
     with tf.variable_scope("discriminator", reuse=reuse):
@@ -156,7 +156,7 @@ def train(batch_size, epochs, dataset, log_dir):
 
     # ##========================== DEFINE INPUT DATA ============================###
     images = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_image_generator')
-    z = tf.placeholder('float32', [None, 256], name='t_noise_generator')
+    z = tf.placeholder('float32', [None, 64], name='t_noise_generator')
     tf.summary.image('input_image', images)
     images_normalized = norm_img(images)  # Normalization
 
