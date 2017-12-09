@@ -227,7 +227,7 @@ def train(batch_size, epochs, dataset, log_dir):
                     input_image = np.asarray(input_image, dtype=float)
                     input_images[count] = input_image
                     count += 1
-                input_z = np.random.uniform(-1., 1, size=[batch_size, 256])
+                input_z = np.random.uniform(-1., 1, size=[batch_size, 64])
                 # ##========================= train SRGAN =========================###
                 kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
                                        feed_dict={images: input_images, z: input_z})
