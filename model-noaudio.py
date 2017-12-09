@@ -14,8 +14,6 @@ DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-
-
 def restore_model(sess, checkpoint_path):
     # Get the state of the checkpoint and then restore using ckpt path
     ckpt = tf.train.get_checkpoint_state(checkpoint_path)
