@@ -180,7 +180,7 @@ def train(batch_size, epochs, dataset, log_dir):
     g_vars = tl.layers.get_variables_with_name('generator', True, True)
     d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
     with tf.variable_scope('learning_rate'):
-        lr = tf.Variable(0.00008, trainable=False)
+        lr = tf.Variable(0.0001, trainable=False)
 
     d_loss_real = tf.reduce_mean(tf.abs(ae_real - images))
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen - output_gen))
