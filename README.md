@@ -7,4 +7,4 @@ In our case, the input to the Generator network will be the audio features of an
 
 ### ARCHITECTURE
 The architecture proposed in the [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf) is quite different to the general way of building GANs. In this case, we have that the architecture used for the Discriminator network is an autoencoder, while the Generator has only the decoder part.
-<img src="2017-dlai-team3/docs/Captura de pantalla 2017-12-09 a las 10.21.16.png" alt="hi" class="inline"/>
+<img src="docs/Captura de pantalla 2017-12-09 a las 10.21.16.png" alt="hi" class="inline"/>
