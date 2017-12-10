@@ -16,10 +16,12 @@ BLAH BLAH BLAH BLAH BLAH
 
 ### AUDIO FEATURE EXTRACTION
 <img src="docs/6.png" alt="hi" class="inline"/>
-In order
-First we extract videos from the youtube platform. We wanted to have well centered faces and with the cleanest audio possible, for that reason we chosed to download videos from Donald Trump public speeches.
-Once the videos were selected, we had to process them to obtain both the face and the audio corresponding to the face. 
-BLAH BLAH BLAH BLAH BLAH
+
+Raw audio data is usually not useful for classification tasks as audio frames have very high dimensionality and the samples are very correlated. So for each frame we need to extract the most important features.
+A good way to do so is to compute the Mel-frequency cepstral coefficients for each audio frame. MFCC are easy to compute, widely used in stat of the art applications and with a very good performance.
+The MFCC values are made up of individual coefficient each representing a specific frequency band of the audio short-term power on a non-linear Mel scale of frequency.
+As the input videos provides us with a 30 faces per second, we decided to get 35ms audio frames to avoid overlapping and 60ms frames to get 50% overlapping. For each audio frame we compute the MFCC coefficients
+on a sliding window with 50% overlap so we obtain a 2D heat map for every audio frame that shows the evolution of the MFCC. 
 
 
 ### ARCHITECTURE
@@ -41,7 +43,5 @@ We decided to finally simplify the network, and input only noise to the generato
 We can see here the evolution of the variable Kt and MGlobal. As can be seen MGlobal decreases, so the generator is able to generate more realistic faces, but, we still generate the same face...
 
 <img src="docs/7.png" alt="hi" width="291" height="188" class="inline"/> <img src="docs/8.png" alt="hi" width="291" height="188" class="inline"/> <img src="docs/output_XxVvWq.gif" alt="hi" class="inline"/>
-
-The next thing we tried, was to reduce even more the learning rate and reduce the batch size to 1. During training we observed that the generator was able to output two types of faces, but finally in testing time we generate always the same one.
 
 
