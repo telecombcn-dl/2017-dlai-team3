@@ -139,6 +139,7 @@ def discriminator(disc_input, reuse, kernel=3, is_train=True):
 
         return x, logits
 
+
 def train(batch_size, epochs, dataset, log_dir):
     global_step = tf.Variable(0, name='global_step', trainable=False)
     image_width = 64
@@ -157,7 +158,7 @@ def train(batch_size, epochs, dataset, log_dir):
     net_gen = generator(z=z, reuse=False)
     tf.summary.image('generated_normalized_image', net_gen.outputs)
     tf.summary.image('generated_image', denorm_img(net_gen.outputs))
-    net_d, logits = discriminator(disc_input=tf.concat([denorm_img(net_gen.outputs), images_normalized], axis=0), reuse=False)
+    net_d, logits = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
     net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
 
     # ###========================== DEFINE TRAIN OPS ==========================###
