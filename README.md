@@ -38,7 +38,7 @@ Here we can see that we still generate the same samples within the batch, and wh
 
 We decided to finally simplify the network, and input only noise to the generator network. That would be, generate different Trump faces without any audio condition. 
 We can see here the evolution of the variable Kt and MGlobal. As can be seen MGlobal decreases, so the generator is able to generate more realistic faces, but, we still generate the same face...
-<img src="docs/7.png" alt="hi" class="inline"/> <img src="docs/8.png" alt="hi" class="inline"/>
-<img src="docs/output_XxVvWq.gif" alt="hi" class="inline"/>
+
+<img src="docs/7.png" alt="hi" class="inline"/> <img src="docs/8.png" alt="hi" class="inline"/> <img src="docs/output_XxVvWq.gif" alt="hi" class="inline"/>
 
 
