@@ -228,7 +228,7 @@ def train(batch_size, epochs, dataset, log_dir):
                     input_images[count] = input_image
                     count += 1
                 input_z = np.random.uniform(-1., 1, size=[batch_size, 64])
-                # ##========================= train SRGAN =========================###
+                # ##========================= train BEGAN =========================###
                 kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
                                        feed_dict={images: input_images, z: input_z})
                 summary_writer.add_summary(summary_str, total)
@@ -251,7 +251,7 @@ def train(batch_size, epochs, dataset, log_dir):
                     input_images[count] = input_image
                     count += 1
                 input_z = np.random.uniform(-1., 1, size=[rest, 64])
-                # ##========================= train SRGAN =========================###
+                # ##========================= train BEGAN =========================###
                 kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
                                                     feed_dict={images: input_images, z: input_z})
                 print("Iteration: %2d kt: %.8f Mglobal: %.8f." % (iteration, kt, mGlobal))

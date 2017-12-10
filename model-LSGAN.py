@@ -5,32 +5,55 @@ from tensorlayer.layers import *
 from data_input import DataInput
 from utils import norm_img, denorm_img, smooth_gan_labels
 
+
+import argparse
+from PIL import Image
+
+DEFAULT_DATA_FACES_PATH = "/storage/dataset"
+DEFAULT_DATA_AUDIOS_PATH = "/storage/dataset_videos/cropped_videos/outputb"
+DEFAULT_LOG_DIR = "/storage/logs"
+DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
+
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+
 def lrelu2(x, name="lrelu"):
     return tf.maximum(x, 0.3*x)
 
+
+def restore_model(sess, checkpoint_path):
+    # Get the state of the checkpoint and then restore using ckpt path
+    ckpt = tf.train.get_checkpoint_state(checkpoint_path)
+
+    if checkpoint_path is not None:
+        restorer = tf.train.Saver()
+        restorer.restore(sess, ckpt.model_checkpoint_path)
+
+
 # TODO: ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
-def generator(gen_input, reuse, batch_size, hidden_number=64, kernel=3):
+def generator(z, reuse, batch_size, hidden_number=64, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
     with tf.variable_scope("generator", reuse=reuse):
         tl.layers.set_name_reuse(reuse)
 
         # EXTRACT AUDIO FEATURES
-        x = InputLayer(gen_input, name="in") #[batch_size, height, width, 1]
-        x = Conv2dLayer(x, shape=[kernel, kernel, 1, 64], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
-                        name='AudioFeatures/conv1')
-        x = Conv2dLayer(x, shape=[kernel, kernel, 64, 128], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
-                        name='AudioFeatures/conv2')
-        # max o avg pool?
-        x = PoolLayer(x,strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool1')
-        x = Conv2dLayer(x, shape=[kernel, kernel, 128, 256], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
-                        name='AudioFeatures/conv3')
-        x = Conv2dLayer(x, shape=[kernel, kernel, 256, 512], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
-                        name='AudioFeatures/conv4')
-        x = PoolLayer(x, strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool2')
-        x = FlattenLayer(x, name='AudioFeatures/flatten')
-        x = DenseLayer(x, n_units=512, name='AudioFeatures/dense1')
-        x = DenseLayer(x, n_units=256, name='AudioFeatures/dense2') #[batch_size, 256]
+        # x = InputLayer(gen_input, name="in") #[batch_size, height, width, 1]
+        # x = Conv2dLayer(x, shape=[kernel, kernel, 1, 64], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
+        #                 name='AudioFeatures/conv1')
+        # x = Conv2dLayer(x, shape=[kernel, kernel, 64, 128], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
+        #                 name='AudioFeatures/conv2')
+        # # max o avg pool?
+        # x = PoolLayer(x,strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool1')
+        # x = Conv2dLayer(x, shape=[kernel, kernel, 128, 256], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
+        #                 name='AudioFeatures/conv3')
+        # x = Conv2dLayer(x, shape=[kernel, kernel, 256, 512], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
+        #                 name='AudioFeatures/conv4')
+        # x = PoolLayer(x, strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool2')
+        # x = FlattenLayer(x, name='AudioFeatures/flatten')
+        # x = DenseLayer(x, n_units=512, name='AudioFeatures/dense1')
+        # x = DenseLayer(x, n_units=256, name='AudioFeatures/dense2') #[batch_size, 256]
 
         # DECODER BEGINS
         # hidden_number = n = 128
@@ -38,6 +61,7 @@ def generator(gen_input, reuse, batch_size, hidden_number=64, kernel=3):
         # Each layer is repeated a number of times (typically 2). We observed that more repetitions led to
         # even better visual results
         # Down-sampling is implemented as sub-sampling with stride 2 and up- sampling is done by nearest neighbor.
+        x = InputLayer(z, name="in")
         x = DenseLayer(x, n_units=8*8*hidden_number, name='Generator/dense2')
         arguments = {'shape': [batch_size, 8, 8, hidden_number], 'name': 'Generator/reshape1'}
         x = LambdaLayer(x, fn=tf.reshape, fn_args=arguments)
@@ -116,16 +140,18 @@ def discriminator(disc_input, reuse, kernel=3, is_train=True):
         return x, logits
 
 def train(batch_size, epochs, dataset, log_dir):
+    global_step = tf.Variable(0, name='global_step', trainable=False)
+    image_width = 64
+    image_height = 64
 
-    # ##========================== DEFINE PIPELINE ============================###
-    images, audio = dataset.input_pipeline(batch_size=batch_size, num_epochs=epochs)
+    # ##========================== DEFINE INPUT DATA ============================###
+    images = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_image_generator')
+    z = tf.placeholder('float32', [None, 64], name='t_noise_generator')
     tf.summary.image('input_image', images)
-    tf.summary.image('audio_images', audio)
     images_normalized = norm_img(images)  # Normalization
 
-
     # ##========================== DEFINE MODEL ============================###
-    net_gen = generator(gen_input=audio, batch_size=batch_size, reuse=False)
+    net_gen = generator(z = z, batch_size=batch_size, reuse=False)
     tf.summary.image('generated_image', denorm_img(net_gen.outputs))
     net_d, logits = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
     net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
@@ -136,11 +162,6 @@ def train(batch_size, epochs, dataset, log_dir):
     d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
     with tf.variable_scope('learning_rate'):
         lr = tf.Variable(1e-4, trainable=False)
-    global_step = tf.Variable(0, trainable=False)
-    decay_rate = 0.5
-    decay_steps = 116722
-    learning_rate = tf.train.inverse_time_decay(lr, global_step=global_step, decay_rate=decay_rate,
-                                                decay_steps=decay_steps)
 
     if np.random.uniform() > 0.1:
         # give correct classifications
@@ -158,49 +179,86 @@ def train(batch_size, epochs, dataset, log_dir):
     d_loss = d_loss_real + d_loss_fake
     g_loss = tf.reduce_mean(tf.square(net_d_false - smooth_gan_labels(tf.ones_like(net_d_false))),
                                         name='g_loss_gan')
-    g_optim = tf.train.AdamOptimizer(learning_rate).minimize(g_loss, var_list=g_vars)
-    d_optim = tf.train.AdamOptimizer(learning_rate).minimize(d_loss, var_list=d_vars)
+    g_optim = tf.train.AdamOptimizer(lr).minimize(g_loss, var_list=g_vars)
+    d_optim = tf.train.AdamOptimizer(lr).minimize(d_loss, var_list=d_vars)
 
 
     tf.summary.scalar('d_loss', d_loss)
     tf.summary.scalar('g_loss', g_loss)
-    tf.summary.scalar('learning rate', learning_rate)
 
     summary = tf.summary.merge_all()
     with tf.Session() as sess:
+        saver = tf.train.Saver(max_to_keep=1)
         # Summary writer to save logs
         summary_writer = tf.summary.FileWriter(os.path.join(log_dir, 'train'), sess.graph)
 
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         sess.run(init_op)
 
-        # Coordinate the different workers for the input data pipeline
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
+        if args.resume == "True":
+            print("Restoring model from checkpoint")
+            restore_model(sess, args.checkpoint_dir)
 
-
-        try:
+        items_faces, items_audio = dataset.get_items()
+        total = 0
+        for j in range(0, epochs):
             iteration = 0
-            while not coord.should_stop():
+            while iteration * batch_size < len(items_faces):
+                input_images = np.empty([batch_size, 64, 64, 3])
+                count = 0
+                for face in items_faces[iteration * batch_size:iteration * batch_size + batch_size]:
+                    input_image = Image.open(face)
+                    input_image = np.asarray(input_image, dtype=float)
+                    input_images[count] = input_image
+                    count += 1
+                input_z = np.random.uniform(-1., 1, size=[batch_size, 64])
+                # ##========================= train LSGAN =========================###
+                summary_str, gLoss, dLoss, _, _ = sess.run([summary, g_loss, d_loss, g_optim, d_optim],
+                                              feed_dict={images: input_images, z: input_z})
+                print("Epoch: %2d Iteration: %2d gLoss: %.8f dLoss: %.8f." % (j, iteration, gLoss, dLoss))
+
+                # ##========================= save checkpoint =========================###
+                if iteration % 3000 == 0 and iteration > 0:
+                    tf.logging.info('Saving checkpoint')
+                    saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
                 iteration += 1
-                # ##========================= train SRGAN =========================###
-                gLoss, dLoss, _, _ = sess.run([g_loss, d_loss, g_optim, d_optim])
-                print("iteration: [%2d] g_loss: %.8f d_loss: %.8f" % (iteration, gLoss, dLoss))
-                summary_str = sess.run(summary)
+                total += 1
+            rest = len(items_faces) - ((iteration - 1) * batch_size)
+            if rest > 0:
+                count = 0
+                input_images = np.empty([rest, 64, 64, 3])
+                for face in items_faces[len(items_faces) - rest:]:
+                    input_image = Image.open(face)
+                    input_image = np.asarray(input_image, dtype=float)
+                    input_images[count] = input_image
+                    count += 1
+                input_z = np.random.uniform(-1., 1, size=[rest, 64])
+                # ##========================= train LSGAN =========================###
+                summary_str, gLoss, dLoss, _, _ = sess.run([summary, g_loss, d_loss, g_optim, d_optim],
+                                              feed_dict={images: input_images, z: input_z})
+                print("Epoch: %2d Iteration: %2d gLoss: %.8f dLoss: %.8f." % (j, iteration, gLoss, dLoss))
                 summary_writer.add_summary(summary_str, iteration)
-                summary_writer.flush()
 
-
-                # ##========================= evaluate data =========================###
-
-        except tf.errors.OutOfRangeError:
-            print('Done -- epoch limit reached')
-        finally:
-            coord.request_stop()
-            coord.join(threads)
 
 
 if __name__ == '__main__':
-    data_path = "/storage/dataset_videos/audio2faces_dataset/"
-    log_dir = "/storage/irina/logs"
-    train(batch_size=16, epochs=1000, dataset=DataInput(data_path, "train"), log_dir=log_dir)
+    parser = argparse.ArgumentParser(description='Predict script')
+    parser.add_argument('-dataset_faces_folder', default=DEFAULT_DATA_FACES_PATH, help='Path to the images file')
+    parser.add_argument('-dataset_audios_folder', default=DEFAULT_DATA_AUDIOS_PATH, help='Path to the audios file')
+    parser.add_argument('-checkpoint_dir', default=DEFAULT_CHECKPOINT_DIR, help='Model checkpoint to use')
+    parser.add_argument('-log_dir', default=DEFAULT_LOG_DIR, help='Model checkpoint to use')
+    parser.add_argument('-resume', default="True", help='Resume training ("True" or "False")')
+
+    args = parser.parse_args()
+
+    if args.resume == "False":
+        if tf.gfile.Exists(args.log_dir):
+            tf.gfile.DeleteRecursively(args.log_dir)
+        tf.gfile.MakeDirs(args.log_dir)
+
+    if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
+        os.mkdir(os.path.dirname(args.checkpoint_dir))
+
+    train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_faces_folder, args.dataset_audios_folder,
+                                                     "train"), log_dir=args.log_dir)
+t
