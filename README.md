@@ -7,15 +7,16 @@ In our case, the input to the Generator network will be the audio features of an
 
 ### DATASET
 <img src="docs/3.png" alt="hi" class="inline"/>
-In order to train our network, we have also created our own dataset.
-First we extract videos from the youtube platform. We wanted to have well centered faces and with the cleanest audio possible, for that reason we chosed to download videos from Donald Trump public speeches.
+In order to train our network, we have also created our own dataset as we did not found any suitable one for our task. The goal was to generate a colection of Donal Trump face images with its asociated audio.
+To do so we first we extract videos from the youtube platform we cropped them on the parts where Trump was speaking and we extracted the images and audio trought a python script that we developed for shuch task.
+We wanted to have well centered faces and with the cleanest audio possible, for that reason we chosed to download videos from Donald Trump public speeches.
 Once the videos were selected, we had to process them to obtain both the face and the audio corresponding to the face. 
 BLAH BLAH BLAH BLAH BLAH
 
 
 ### AUDIO FEATURE EXTRACTION
 <img src="docs/6.png" alt="hi" class="inline"/>
-In order to train our network, we have also created our own dataset.
+In order
 First we extract videos from the youtube platform. We wanted to have well centered faces and with the cleanest audio possible, for that reason we chosed to download videos from Donald Trump public speeches.
 Once the videos were selected, we had to process them to obtain both the face and the audio corresponding to the face. 
 BLAH BLAH BLAH BLAH BLAH
