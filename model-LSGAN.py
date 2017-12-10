@@ -175,7 +175,6 @@ def train(batch_size, epochs, dataset, log_dir):
     g_optim = tf.train.AdamOptimizer(lr).minimize(g_loss, var_list=g_vars)
     d_optim = tf.train.AdamOptimizer(lr).minimize(d_loss, var_list=d_vars)
 
-
     tf.summary.scalar('d_loss', d_loss)
     tf.summary.scalar('g_loss', g_loss)
 
