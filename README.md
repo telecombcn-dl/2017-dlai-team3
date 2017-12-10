@@ -42,4 +42,6 @@ We can see here the evolution of the variable Kt and MGlobal. As can be seen MGl
 
 <img src="docs/7.png" alt="hi" width="291" height="188" class="inline"/> <img src="docs/8.png" alt="hi" width="291" height="188" class="inline"/> <img src="docs/output_XxVvWq.gif" alt="hi" class="inline"/>
 
+The next thing we tried, was to reduce even more the learning rate and reduce the batch size to 1. During training we observed that the generator was able to output two types of faces, but finally in testing time we generate always the same one.
+
 
