@@ -147,6 +147,9 @@ def train(batch_size, epochs, dataset, log_dir):
     # ##========================== DEFINE INPUT DATA ============================###
     images = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_image_generator')
     z = tf.placeholder('float32', [None, 64], name='t_noise_generator')
+    y_gan_real = tf.placeholder('float32', [None, 1], name='t_labels_real')
+    y_gan_fake = tf.placeholder('float32', [None, 1], name='t_labels_fake')
+    y_generator = tf.placeholder('float32', [None, 1], name='t_labels_generator')
     tf.summary.image('input_image', images)
     images_normalized = norm_img(images)  # Normalization
 
@@ -163,22 +166,12 @@ def train(batch_size, epochs, dataset, log_dir):
     with tf.variable_scope('learning_rate'):
         lr = tf.Variable(1e-4, trainable=False)
 
-    if np.random.uniform() > 0.1:
-        # give correct classifications
-        y_gan_real = tf.ones_like(net_d_real)
-        y_gan_fake = tf.zeros_like(net_d_false)
-    else:
-        # give wrong classifications (noisy labels)
-        y_gan_real = tf.zeros_like(net_d_real)
-        y_gan_fake = tf.ones_like(net_d_false)
-
-    d_loss_real = tf.reduce_mean(tf.square(net_d_real - smooth_gan_labels(y_gan_real)),
+    d_loss_real = tf.reduce_mean(tf.square(net_d_real - y_gan_real),
                                  name='d_loss_real')
-    d_loss_fake = tf.reduce_mean(tf.square(net_d_false - smooth_gan_labels(y_gan_fake)),
+    d_loss_fake = tf.reduce_mean(tf.square(net_d_false - y_gan_fake),
                                  name='d_loss_fake')
     d_loss = d_loss_real + d_loss_fake
-    g_loss = tf.reduce_mean(tf.square(net_d_false - smooth_gan_labels(tf.ones_like(net_d_false))),
-                                        name='g_loss_gan')
+    g_loss = tf.reduce_mean(tf.square(net_d_false - y_generator), name='g_loss_gan')
     g_optim = tf.train.AdamOptimizer(lr).minimize(g_loss, var_list=g_vars)
     d_optim = tf.train.AdamOptimizer(lr).minimize(d_loss, var_list=d_vars)
 
@@ -212,9 +205,23 @@ def train(batch_size, epochs, dataset, log_dir):
                     input_images[count] = input_image
                     count += 1
                 input_z = np.random.uniform(-1., 1, size=[batch_size, 64])
+
+                if np.random.uniform() > 0.1:
+                    # give correct classifications
+                    labels_real = np.random.uniform(size=[batch_size, 1], low=0.7, high=1.2)
+                    labels_fake = np.random.uniform(size=[batch_size, 1], low=0.0, high=0.3)
+                else:
+                    # give wrong classifications (noisy labels)
+                    labels_fake = np.random.uniform(size=[batch_size, 1], low=0.7, high=1.2)
+                    labels_real = np.random.uniform(size=[batch_size, 1], low=0.0, high=0.3)
+
+                labels_generator = np.random.uniform(size=[batch_size, 1], low=0.7, high=1.2)
+
                 # ##========================= train LSGAN =========================###
                 summary_str, gLoss, dLoss, _, _ = sess.run([summary, g_loss, d_loss, g_optim, d_optim],
-                                              feed_dict={images: input_images, z: input_z})
+                                              feed_dict={images: input_images, z: input_z,
+                                                         y_gan_real: labels_real, y_gan_fake: labels_fake,
+                                                         y_generator: labels_generator})
                 print("Epoch: %2d Iteration: %2d gLoss: %.8f dLoss: %.8f." % (j, iteration, gLoss, dLoss))
 
                 # ##========================= save checkpoint =========================###
@@ -233,9 +240,22 @@ def train(batch_size, epochs, dataset, log_dir):
                     input_images[count] = input_image
                     count += 1
                 input_z = np.random.uniform(-1., 1, size=[rest, 64])
+                if np.random.uniform() > 0.1:
+                    # give correct classifications
+                    labels_real = np.random.uniform(size=[rest, 1], low=0.7, high=1.2)
+                    labels_fake = np.random.uniform(size=[rest, 1], low=0.0, high=0.3)
+                else:
+                    # give wrong classifications (noisy labels)
+                    labels_fake = np.random.uniform(size=[rest, 1], low=0.7, high=1.2)
+                    labels_real = np.random.uniform(size=[rest, 1], low=0.0, high=0.3)
+
+                labels_generator = np.random.uniform(size=[rest, 1], low=0.7, high=1.2)
+
                 # ##========================= train LSGAN =========================###
                 summary_str, gLoss, dLoss, _, _ = sess.run([summary, g_loss, d_loss, g_optim, d_optim],
-                                              feed_dict={images: input_images, z: input_z})
+                                              feed_dict={images: input_images, z: input_z,
+                                                         y_gan_real: labels_real, y_gan_fake: labels_fake,
+                                                         y_generator: labels_generator})
                 print("Epoch: %2d Iteration: %2d gLoss: %.8f dLoss: %.8f." % (j, iteration, gLoss, dLoss))
                 summary_writer.add_summary(summary_str, iteration)
 
