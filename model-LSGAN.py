@@ -155,8 +155,9 @@ def train(batch_size, epochs, dataset, log_dir):
 
     # ##========================== DEFINE MODEL ============================###
     net_gen = generator(z=z, reuse=False)
+    tf.summary.image('generated_normalized_image', net_gen.outputs)
     tf.summary.image('generated_image', denorm_img(net_gen.outputs))
-    net_d, logits = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
+    net_d, logits = discriminator(disc_input=tf.concat([denorm_img(net_gen.outputs), images_normalized], axis=0), reuse=False)
     net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
 
     # ###========================== DEFINE TRAIN OPS ==========================###
@@ -166,10 +167,8 @@ def train(batch_size, epochs, dataset, log_dir):
     with tf.variable_scope('learning_rate'):
         lr = tf.Variable(1e-4, trainable=False)
 
-    d_loss_real = tf.reduce_mean(tf.square(net_d_real - y_gan_real),
-                                 name='d_loss_real')
-    d_loss_fake = tf.reduce_mean(tf.square(net_d_false - y_gan_fake),
-                                 name='d_loss_fake')
+    d_loss_real = tf.reduce_mean(tf.square(net_d_real - y_gan_real), name='d_loss_real')
+    d_loss_fake = tf.reduce_mean(tf.square(net_d_false - y_gan_fake), name='d_loss_fake')
     d_loss = d_loss_real + d_loss_fake
     g_loss = tf.reduce_mean(tf.square(net_d_false - y_generator), name='g_loss_gan')
     g_optim = tf.train.AdamOptimizer(lr).minimize(g_loss, var_list=g_vars)
@@ -222,6 +221,7 @@ def train(batch_size, epochs, dataset, log_dir):
                                               feed_dict={images: input_images, z: input_z,
                                                          y_gan_real: labels_real, y_gan_fake: labels_fake,
                                                          y_generator: labels_generator})
+                summary_writer.add_summary(summary_str, total)
                 print("Epoch: %2d Iteration: %2d gLoss: %.8f dLoss: %.8f." % (j, iteration, gLoss, dLoss))
 
                 # ##========================= save checkpoint =========================###
