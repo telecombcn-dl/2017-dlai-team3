@@ -12,8 +12,8 @@ def denorm_img(norm):
 
 def smooth_gan_labels(y):
     if y == 0:
-        y_out = tf.random_uniform(shape=y.get_shape(), minval=0.0, maxval=0.3)
+        y_out = tf.random_uniform(shape=[-1, 1], minval=0.0, maxval=0.3)
     else:
-        y_out = tf.random_uniform(shape=y.get_shape(), minval=0.7, maxval=1.2)
+        y_out = tf.random_uniform(shape=[-1, 1], minval=0.7, maxval=1.2)
 
     return y_out

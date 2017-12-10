@@ -32,7 +32,7 @@ def restore_model(sess, checkpoint_path):
 
 
 # TODO: ADD SKIP CONNECTIONS (To improve performance, not in the original began paper)
-def generator(z, reuse, batch_size, hidden_number=64, kernel=3):
+def generator(z, reuse, hidden_number=64, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
     with tf.variable_scope("generator", reuse=reuse):
@@ -63,7 +63,7 @@ def generator(z, reuse, batch_size, hidden_number=64, kernel=3):
         # Down-sampling is implemented as sub-sampling with stride 2 and up- sampling is done by nearest neighbor.
         x = InputLayer(z, name="in")
         x = DenseLayer(x, n_units=8*8*hidden_number, name='Generator/dense2')
-        arguments = {'shape': [batch_size, 8, 8, hidden_number], 'name': 'Generator/reshape1'}
+        arguments = {'shape': [-1, 8, 8, hidden_number], 'name': 'Generator/reshape1'}
         x = LambdaLayer(x, fn=tf.reshape, fn_args=arguments)
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1,1,1,1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu,name='Generator/conv1')
@@ -151,7 +151,7 @@ def train(batch_size, epochs, dataset, log_dir):
     images_normalized = norm_img(images)  # Normalization
 
     # ##========================== DEFINE MODEL ============================###
-    net_gen = generator(z = z, batch_size=batch_size, reuse=False)
+    net_gen = generator(z=z, reuse=False)
     tf.summary.image('generated_image', denorm_img(net_gen.outputs))
     net_d, logits = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
     net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
@@ -166,7 +166,7 @@ def train(batch_size, epochs, dataset, log_dir):
     if np.random.uniform() > 0.1:
         # give correct classifications
         y_gan_real = tf.ones_like(net_d_real)
-        y_gan_fake= tf.zeros_like(net_d_false)
+        y_gan_fake = tf.zeros_like(net_d_false)
     else:
         # give wrong classifications (noisy labels)
         y_gan_real = tf.zeros_like(net_d_real)
