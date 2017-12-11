@@ -1,5 +1,7 @@
 ## FACE GENERATION USING GENERATIVE ADVERSARIAL NETWORKS
 
+ [SLIDES](https://docs.google.com/presentation/d/1i9X-fPDfjBX5CcmDRsyYhzLbjXMfhw8-9sB-Cx_A_fc/edit?usp=sharing)
+
 ### INTRODUCTION
 <img src="docs/2.png" alt="hi" class="inline"/>
 Our idea is to generate a talking face from an audio segment by using Generative Adversarial Networks (GANs). The architecture used is the proposed by David Berthelot, Thomas Schumm and Luke Metz in their work [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf).
