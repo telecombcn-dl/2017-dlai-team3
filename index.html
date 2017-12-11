@@ -19,153 +19,210 @@
 	<body id="top">
 
 		<!-- Header -->
-			<header id="header" class="skel-layers-fixed">
-				<h1><a href="#">TOP</a></h1>
-				<nav id="nav">
- 					<ul>
- 						<li><a href="#authors">Authors</a></li>
- 						<li><a href="#introduction">Introduction</a></li>
- 	 					<li><a href="#dataset">Dataset generation</a></li>
- 						<li><a href="#architecture">Architecture</a></li>
- 						<li><a href="#problems_solutions">Problems and Solutions</a></li>
- 						<li><a href="#vae">Variational Autoencoder</a></li>
- 						<li><a href="#future_work">Future Work</a></li>
- 					</ul>
- 				</nav>
-			</header>
+		<header id="header" class="skel-layers-fixed">
+			<h1><a href="#">TOP</a></h1>
+			<nav id="nav">
+				<ul>
+					<li><a href="#authors">Authors</a></li>
+					<li><a href="#introduction">Introduction</a></li>
+ 					<li><a href="#dataset">Dataset generation</a></li>
+					<li><a href="#architecture">Architecture</a></li>
+					<li><a href="#problems_solutions">Problems and Solutions</a></li>
+					<li><a href="#future_work">Future Work</a></li>
+				</ul>
+			</nav>
+		</header>
 
 		<!-- Banner -->
-			<section id="banner">
-				<div class="inner">
-					<h2>DLAI Team 3 - Audio2Faces</h2>
-				</div>
-			</section>
+		<section id="banner">
+			<div class="inner">
+				<h2>DLAI Team 3 - Audio2Faces</h2>
+			</div>
+		</section>
 
 		<!-- One -->
-			<section id="authors" class="wrapper style1">
-				<header class="major">
-						<h2>Authors</h2>
-				</header>
+		<section id="authors" class="wrapper style1">
+			<header class="major">
+					<h2>Authors</h2>
+			</header>
 
-				<div class="container">
-					<div class="row">
-						<div class="3u">
-							<section class="special box">
-								<a href="https://www.linkedin.com/in/alejandro-woodward-a21a46100" class="image fit"><img src="images/AlejandroWoodward.jpg" alt="" /></a>
-								<p>Alejandro Woodward</p>
-							</section>
-						</div>
-						<div class="3u">
-							<section class="special box">
-								<a href="https://www.linkedin.com/in/irina-sánchez-muriana-65204311b/" class="image fit"><img src="images/irina.jpeg" alt="" /></a>
-								<p>Irina Sánchez</p>
-							</section>
-						</div>
-						<div class="3u">
-							<section class="special box">
-								<a href="https://www.linkedin.com/in/gen%C3%ADs-floriach-pigem-b74715b8/" class="image fit"><img src="images/genis.jpeg" alt="" /></a>
-								<p>Genís Floriach</p>
-							</section>
-						</div>
-						<div class="3u">
-							<section class="special box">
-								<a href="https://www.linkedin.com/in/oriol-vila-clarà-043867b9/" class="image fit"><img src="images/oriol.jpeg" alt="" /></a>
-								<p>Oriol Vila</p>
-							</section>
-						</div>
+			<div class="container">
+				<div class="row">
+					<div class="3u">
+						<section class="special box">
+							<a href="https://www.linkedin.com/in/alejandro-woodward-a21a46100" class="image fit"><img src="images/AlejandroWoodward.jpg" alt="" /></a>
+							<p>Alejandro Woodward</p>
+						</section>
+					</div>
+					<div class="3u">
+						<section class="special box">
+							<a href="https://www.linkedin.com/in/irina-sánchez-muriana-65204311b/" class="image fit"><img src="images/irina.jpeg" alt="" /></a>
+							<p>Irina Sánchez</p>
+						</section>
+					</div>
+					<div class="3u">
+						<section class="special box">
+							<a href="https://www.linkedin.com/in/gen%C3%ADs-floriach-pigem-b74715b8/" class="image fit"><img src="images/genis.jpeg" alt="" /></a>
+							<p>Genís Floriach</p>
+						</section>
+					</div>
+					<div class="3u">
+						<section class="special box">
+							<a href="https://www.linkedin.com/in/oriol-vila-clarà-043867b9/" class="image fit"><img src="images/oriol.jpeg" alt="" /></a>
+							<p>Oriol Vila</p>
+						</section>
 					</div>
 				</div>
-			</section>
+			</div>
+		</section>
+
 		<!-- Three -->
-			<section id="introduction" class="wrapper style1">
-				<header class="major">
-					<h2>Introduction</h2>
-				</header>
-				<div class="container">
-					<div class="row">
-						<div class="6u">
-							<section>
-								<h2>Abstract</h2>
-								<a class="image fit"><img src="images/2.png" alt="" /></a>
-								<p> Our idea is to generate a talking face from an audio segment by using Generative Adversarial Networks (GANs). The architecture used is the proposed by David Berthelot, Thomas Schumm and Luke Metz in their work [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf).
-								In our case, the input to the Generator network will be the audio features of an audio segment. Those features are obtained by passing the MFCC coefficients of the audio segment through a shallow CNN architecture. By doing that, we provide information to the generator network to be able to generate a face according to the provided audio segment.</p>
-							</section>
-						</div>
-						<div class="6u">
-							<section>
-								<h3>Dataset</h3>
-								<a class="image fit"><img src="images/3.png" alt="" /></a>
-								<p>In order to train our network, we have also created our own dataset as we did not found any suitable one for our task. The goal was to generate a colection of Donal Trump face images with its asociated audio.
-								To do so, first we extracted videos from the youtube platform. Then, we cropped them on the parts where Trump was speaking and we extracted the images and audio using a python script that we developed for such task.
-								We wanted to have well centered faces and with the cleanest audio possible, for that reason we chosed to download videos from Donald Trump public speeches.
-								Once the videos were selected, we had to process them to obtain both the face and the audio corresponding to the face. </p>
-							</section>
-						</div>
+		<section id="introduction" class="wrapper style1">
+			<header class="major">
+				<h2>Introduction</h2>
+			</header>
+			<div class="container">
+				<div class="row">
+					<div class="6u">
+						<section>
+							<h2>Abstract</h2>
+							<a class="image fit"><img src="images/2.png" alt="" /></a>
+							<p> Our idea is to generate a talking face from an audio segment by using Generative Adversarial Networks (GANs). The architecture used is the proposed by David Berthelot, Thomas Schumm and Luke Metz in their work [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf).
+							In our case, the input to the Generator network will be the audio features of an audio segment. Those features are obtained by passing the MFCC coefficients of the audio segment through a shallow CNN architecture. By doing that, we provide information to the generator network to be able to generate a face according to the provided audio segment.</p>
+						</section>
+					</div>
+					<div class="6u">
+						<section>
+							<h3>Dataset</h3>
+							<a class="image fit"><img src="images/3.png" alt="" /></a>
+							<p>In order to train our network, we have also created our own dataset as we did not found any suitable one for our task. The goal was to generate a colection of Donal Trump face images with its asociated audio.
+							To do so, first we extracted videos from the youtube platform. Then, we cropped them on the parts where Trump was speaking and we extracted the images and audio using a python script that we developed for such task.
+							We wanted to have well centered faces and with the cleanest audio possible, for that reason we chosed to download videos from Donald Trump public speeches.
+							Once the videos were selected, we had to process them to obtain both the face and the audio corresponding to the face. </p>
+						</section>
 					</div>
 				</div>
-			</section>			
+			</div>
+		</section>			
 
 		<section id="dataset" class="wrapper style1">
-				<header class="major">
-					<h2>Dataset generation</h2>
-				</header>
-				<div class="container">
-					<div class="row">
-						<div class="7u">
-							<section>
-								<h2>Audio</h2>
-								<a class="image fit"><img src="images/6.png" alt="" /></a>
-								<p> Raw audio data is usually not useful for classification tasks as audio frames have very high dimensionality and the samples are very correlated. So for each frame we need to extract the most important features.
-								A good way to do so is to compute the Mel-frequency cepstral coefficients for each audio frame. MFCC are easy to compute, widely used in stat of the art applications and with a very good performance.
-								The MFCC values are made up of individual coefficient each representing a specific frequency band of the audio short-term power on a non-linear Mel scale of frequency.
-								As the input videos provides us with a 30 faces per second, we decided to get 35ms audio frames to avoid overlapping and 60ms frames to get 50% overlapping. For each audio frame we compute the MFCC coefficients on a sliding window with 50% overlap so we obtain a 2D heat map for every audio frame that shows the evolution of the MFCC.</p>
-							</section>
-						</div>
-						<div class="5u">
-							<section>
-								<h2>Faces</h2>
-								<a class="image fit"><img src="images/12.jpeg" alt="" /></a>
-								<p> In order to extract the face we resorted to the well known library for computer vision [OpenCV](https://opencv.org/). Using this library we extracted each frame of the video, then we processed each frame independently to extract the face. On the first iteration of our project we used the Viola Jones face detector. It worked pretty well but had some problems such as a high false positive rate and the fact that the faces where not centered inside the bounding box. To overcome this drawbacks and obtain a better dataset with less variance we changed the face detection algorithm.</p>
-							</section>
-						</div>
+			<header class="major">
+				<h2>Dataset generation</h2>
+			</header>
+			<div class="container">
+				<div class="row">
+					<div class="7u">
+						<section>
+							<h2>Audio</h2>
+							<a class="image fit"><img src="images/6.png" alt="" /></a>
+							<p> Raw audio data is usually not useful for classification tasks as audio frames have very high dimensionality and the samples are very correlated. So for each frame we need to extract the most important features.
+							A good way to do so is to compute the Mel-frequency cepstral coefficients for each audio frame. MFCC are easy to compute, widely used in stat of the art applications and with a very good performance.
+							The MFCC values are made up of individual coefficient each representing a specific frequency band of the audio short-term power on a non-linear Mel scale of frequency.
+							As the input videos provides us with a 30 faces per second, we decided to get 35ms audio frames to avoid overlapping and 60ms frames to get 50% overlapping. For each audio frame we compute the MFCC coefficients on a sliding window with 50% overlap so we obtain a 2D heat map for every audio frame that shows the evolution of the MFCC.</p>
+						</section>
 					</div>
-
-				</div>
-					
-			</div>
-
-		</section>
-				<section id="architecture" class="wrapper style1">
-				<header class="major">
-					<h2>Architecture</h2>
-				</header>
-				<div class="container">
-					<div class="row">
-						<div class="6u">
-							<section>
-								<h2>BEGAN</h2>
-								<a class="image fit"><img src="images/1.png" alt="" /></a>
-								<p> The architecture proposed in the [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf) is quite different to the general way of building GANs. In this case, we have that the architecture used for the Discriminator network is an autoencoder, while the Generator has only the decoder part. In order to conditioned the Generator network to generate talking faces according to an audio segment, we input to the generator audio features instead of a random noise. Those features have been extracted from a CNN which had as an input the audio segment. This CNN is composed by: Conv (3x3,64) + Conv (3x3,128) + Pool(2)  + Conv (3x3,256) + Conv (3x3,512) + Dense(512) + Dense (256).</p>
-							</section>
-						</div>
-						<div class="6u">
-							<section>
-								<h2>Variational Autoencoder</h2>
-								<a class="image fit"><img src="images/11.png" alt="" /></a>
-								<p> The aim of an autoencoder is to learn a representation (encoding) for a set of data, typically for the purpose of dimensionality reduction. We use this to extract features from the MFCC coeficients in order to ease the task for the main network.  If the feature extractor weights are learned at the same time that the generator is trained, the discriminator will have even more advantage.</p>
-							</section>
-						</div>
+					<div class="5u">
+						<section>
+							<h2>Faces</h2>
+							<a class="image fit"><img src="images/12.jpeg" alt="" /></a>
+							<p> In order to extract the face we resorted to the well known library for computer vision [OpenCV](https://opencv.org/). Using this library we extracted each frame of the video, then we processed each frame independently to extract the face. On the first iteration of our project we used the Viola Jones face detector. It worked pretty well but had some problems such as a high false positive rate and the fact that the faces where not centered inside the bounding box. To overcome this drawbacks and obtain a better dataset with less variance we changed the face detection algorithm.</p>
+						</section>
 					</div>
-
 				</div>
-					
 			</div>
-
 		</section>
 
+		<section id="architecture" class="wrapper style1">
+			<header class="major">
+				<h2>Architecture</h2>
+			</header>
+			<div class="container">
+				<div class="row">
+					<div class="6u">
+						<section>
+							<h2>BEGAN</h2>
+							<a class="image fit"><img src="images/1.png" alt="" /></a>
+							<p> The architecture proposed in the [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf) is quite different to the general way of building GANs. In this case, we have that the architecture used for the Discriminator network is an autoencoder, while the Generator has only the decoder part. In order to conditioned the Generator network to generate talking faces according to an audio segment, we input to the generator audio features instead of a random noise. Those features have been extracted from a CNN which had as an input the audio segment. This CNN is composed by: Conv (3x3,64) + Conv (3x3,128) + Pool(2)  + Conv (3x3,256) + Conv (3x3,512) + Dense(512) + Dense (256).</p>
+						</section>
+					</div>
+					<div class="6u">
+						<section>
+							<h2>Variational Autoencoder</h2>
+							<a class="image fit"><img src="images/11.png" alt="" /></a>
+							<p> The aim of an autoencoder is to learn a representation (encoding) for a set of data, typically for the purpose of dimensionality reduction. We use this to extract features from the MFCC coeficients in order to ease the task for the main network.  If the feature extractor weights are learned at the same time that the generator is trained, the discriminator will have even more advantage.</p>
+						</section>
 					</div>
 				</div>
-			</footer> 
+
+			</div>
+		</section>
+
+		<section id="problems_solutions" class="wrapper style1">
+			<header class="major">
+				<h2>Problems and solutions</h2>
+			</header>
+			<div class="container">
+				<div class="row">
+					<div class="12u">
+						<section>
+							<h2>First problem</h2>
+							<a class="image fit"><img src="images/4.png" alt="" /></a>
+							<p> The training of the system was not as straightforward as we thought. We had to face some problems during the training phase and the generation of the dataset.
+							During training, the Generator's output was always the same in a batch, so we had a mode collapse problem. </p>
+							<p>In this image we can see at the left, the faces generated by the Generator network. Each one of the rows correspond to a batch, so we are showing two samples for each batch. As can be seen, the faces generated in each of the batches are the same within the batch. To the right, we have at the top the input image and below the images generated by the Discriminator network (Remember that the Discriminator in the BEGAN architecture is an autoencoder, so it also generates images).</p>
+						</section>
+					</div>
+				</div>
+				<div class="row">
+					<div class="8u">
+						<h2>Second problem</h2>
+						<section>
+							<p> In order to overcome the situation, we concatenate to the input audio features a random noise. The reason is that audio features were very similar between each other, so maybe the network was not able to obtain enough information and so it fails in generating different images. The introduction of a random sequence to the input, was thought to provide this variability and so improve the results. But... it also failed.</p>
+							<a class="image fit"><img src="images/5.png" alt="" /></a>
+							<p>Here we can see that we still generate the same samples within the batch, and what is more, the Generator network at some point fails completely, and it is not able to ouput faces anymore.
+							We decided to finally simplify the network, and input only noise to the generator network. That would be, generate different Trump faces without any audio condition. 
+							We can see here the evolution of the variable Kt and MGlobal. As can be seen MGlobal decreases, so the generator is able to generate more realistic faces, but, we still generate the same face...</p>
+						</section>
+					</div>
+					<div class="4u">
+						<h2>Third problem</h2>
+						<section>
+							<a class="image fit"><img src="images/7.png" alt="" /></a>
+							<a class="image fit"><img src="images/8.png" alt="" /></a>
+							<a class="image fit"><img src="images/output_XxVvWq.gif" alt="" /></a>
+							<p>The last trick we tried to overcome the situation, was to reduce even more the learning rate and also reduce the batch size to just one image. In that case we were able in training time to generate faces from both of the videos used for training (previously the network was only generating a face corresponding to one of the videos). But finally, when testing we were again generating the same face.</p>
+						</section>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section id="problems_solutions" class="wrapper style1">
+			<div class="container">
+				<div class="row">
+					<div class="6u">
+						<section>
+							<h2>Future work</h2>
+							<p> Keep working on the project...</p>
+						</section>
+					</div>
+				</div>
+			</div>
+		</section>
+		<section id="problems_solutions" class="wrapper style2">
+			<div class="container">
+				<div class="row">
+					<div class="6u">
+						<section>
+							<h2>References</h2>
+							<p> [1] David Berthelot, Thomas Schumm, Luke Metz [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf) 
+							</p>
+							<p>...</p>
+						</section>
+					</div>
+				</div>
+			</div>
+		</section>
 
 	</body>
 </html>
