@@ -25,7 +25,7 @@ def parse_args():
 
     parser.add_argument('--learn_rate', type=float, default=1e-7, help='Learning rate for Adam optimizer')
 
-    parser.add_argument('--num_epochs', type=int, default=80, help='The number of epochs to run')
+    parser.add_argument('--num_epochs', type=int, default=300, help='The number of epochs to run')
 
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
 
@@ -172,7 +172,7 @@ def check_args(args):
 def main(args):
 
     n_hidden = args.n_hidden
-    dim_img = 35*12  # number of pixels for a MNIST image
+    dim_img = 35*11
     dim_z = args.dim_z
 
     # train
@@ -191,6 +191,7 @@ def main(args):
     # In denoising-autoencoder, x_hat == x + noise, otherwise x_hat == x
     x_hat = tf.placeholder(tf.float32, shape=[None, dim_img], name='input_img')
     x = tf.placeholder(tf.float32, shape=[None, dim_img], name='target_img')
+    tf.summary.image('target_img', tf.reshape(x, shape=[-1, 35, 11, 1]))
 
     # dropout
     keep_prob = tf.placeholder(tf.float32, name='keep_prob')
@@ -198,17 +199,23 @@ def main(args):
     # network architecture
     y, z, loss, neg_marginal_likelihood, KL_divergence = vae.autoencoder(x_hat, x, dim_img, dim_z, n_hidden, keep_prob)
 
+    tf.summary.image('output_img', tf.reshape(y, shape=[-1, 35, 11, 1]))
+    tf.summary.scalar('loss', loss)
+    tf.summary.scalar('neg_marginal_likelihood', neg_marginal_likelihood)
+    tf.summary.scalar('KL_divergence', KL_divergence)
+
     # optimization
     train_op = tf.train.AdamOptimizer(learn_rate).minimize(loss)
 
     """ training """
     # train
     total_batch = int(n_samples / batch_size)
-
+    summary = tf.summary.merge_all()
     with tf.Session() as sess:
 
         sess.run(tf.global_variables_initializer(), feed_dict={keep_prob : 0.9})
-
+        summary_writer = tf.summary.FileWriter(os.path.join("/storage/logs", 'train'), sess.graph)
+        total = 0
         for epoch in range(n_epochs):
 
             # Random shuffling
@@ -222,9 +229,11 @@ def main(args):
 
                 batch_xs_target = batch_xs_input
 
-                _, tot_loss, loss_likelihood, loss_divergence = sess.run(
-                    (train_op, loss, neg_marginal_likelihood, KL_divergence),
+                _, tot_loss, loss_likelihood, loss_divergence, summary_str = sess.run(
+                    (train_op, loss, neg_marginal_likelihood, KL_divergence, summary),
                     feed_dict={x_hat: batch_xs_input, x: batch_xs_target, keep_prob : 0.9})
+                summary_writer.add_summary(summary_str, total)
+                total += 1
 
             print("epoch %d: L_tot %03.2f L_likelihood %03.2f L_divergence %03.2f" % (epoch, tot_loss,
                                                                                       loss_likelihood,
