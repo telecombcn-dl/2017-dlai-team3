@@ -58,7 +58,7 @@
 						<div class="3u">
 							<section class="special box">
 								<a href="https://www.linkedin.com/in/irina-sánchez-muriana-65204311b/" class="image fit"><img src="images/irina.jpeg" alt="" /></a>
-								<p>Irina Sanchez</p>
+								<p>Irina Sánchez</p>
 							</section>
 						</div>
 						<div class="3u">
@@ -106,14 +106,53 @@
 			</section>			
 
 		<section id="dataset" class="wrapper style1">
+				<header class="major">
+					<h2>Dataset generation</h2>
+				</header>
 				<div class="container">
 					<div class="row">
-
-						<div class="12u">
+						<div class="6u">
 							<section>
-								<h2>Dataset generation</h2>
+								<h2>Audio</h2>
 								<a class="image fit"><img src="images/6.png" alt="" /></a>
+								<p> Raw audio data is usually not useful for classification tasks as audio frames have very high dimensionality and the samples are very correlated. So for each frame we need to extract the most important features.
+								A good way to do so is to compute the Mel-frequency cepstral coefficients for each audio frame. MFCC are easy to compute, widely used in stat of the art applications and with a very good performance.
+								The MFCC values are made up of individual coefficient each representing a specific frequency band of the audio short-term power on a non-linear Mel scale of frequency.
+								As the input videos provides us with a 30 faces per second, we decided to get 35ms audio frames to avoid overlapping and 60ms frames to get 50% overlapping. For each audio frame we compute the MFCC coefficients on a sliding window with 50% overlap so we obtain a 2D heat map for every audio frame that shows the evolution of the MFCC.</p>
+							</section>
+						</div>
+						<div class="6u">
+							<section>
+								<h2>Faces</h2>
+								<a class="image fit"><img src="images/10.jpg" alt="" /></a>
 								<p> In order to extract the face we resorted to the well known library for computer vision [OpenCV](https://opencv.org/). Using this library we extracted each frame of the video, then we processed each frame independently to extract the face. On the first iteration of our project we used the Viola Jones face detector. It worked pretty well but had some problems such as a high false positive rate and the fact that the faces where not centered inside the bounding box. To overcome this drawbacks and obtain a better dataset with less variance we changed the face detection algorithm.</p>
+							</section>
+						</div>
+					</div>
+
+				</div>
+					
+			</div>
+
+		</section>
+				<section id="architecture" class="wrapper style1">
+				<header class="major">
+					<h2>Architecture</h2>
+				</header>
+				<div class="container">
+					<div class="row">
+						<div class="6u">
+							<section>
+								<h2>BEGAN</h2>
+								<a class="image fit"><img src="images/1.png" alt="" /></a>
+								<p> The architecture proposed in the [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf) is quite different to the general way of building GANs. In this case, we have that the architecture used for the Discriminator network is an autoencoder, while the Generator has only the decoder part. In order to conditioned the Generator network to generate talking faces according to an audio segment, we input to the generator audio features instead of a random noise. Those features have been extracted from a CNN which had as an input the audio segment. This CNN is composed by: Conv (3x3,64) + Conv (3x3,128) + Pool(2)  + Conv (3x3,256) + Conv (3x3,512) + Dense(512) + Dense (256).</p>
+							</section>
+						</div>
+						<div class="6u">
+							<section>
+								<h2>Variational Autoencoder</h2>
+								<a class="image fit"><img src="images/11.png" alt="" /></a>
+								<p> The aim of an autoencoder is to learn a representation (encoding) for a set of data, typically for the purpose of dimensionality reduction. We use this to extract features from the MFCC coeficients in order to ease the task for the main network.  If the feature extractor weights are learned at the same time that the generator is trained, the discriminator will have even more advantage.</p>
 							</section>
 						</div>
 					</div>
