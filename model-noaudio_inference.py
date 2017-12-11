@@ -20,7 +20,7 @@ def restore_model(sess, checkpoint_path):
     ckpt = tf.train.get_checkpoint_state(checkpoint_path)
 
     if checkpoint_path is not None:
-        restorer = tf.train.Saver(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="generator"))
+        restorer = tf.train.Saver()
         restorer.restore(sess, ckpt.model_checkpoint_path)
 
 
@@ -156,69 +156,69 @@ def train(batch_size, epochs, dataset):
     image_height = 64
 
     # ##========================== DEFINE INPUT DATA ============================###
-    # images = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_image_generator')
+    images = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_image_generator')
     z = tf.placeholder('float32', [None, 64], name='t_noise_generator')
-    # images_normalized = norm_img(images)  # Normalization
+    images_normalized = norm_img(images)  # Normalization
 
     # ##========================== DEFINE MODEL ============================###
     net_gen = generator(z=z, reuse=False)
-    # net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
-    # net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
+    net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
+    net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
 
     output_gen = denorm_img(net_gen.outputs)  # Denormalization
-    # ae_gen, ae_real = denorm_img(net_d_false), denorm_img(net_d_real)  # Denormalization
+    ae_gen, ae_real = denorm_img(net_d_false), denorm_img(net_d_real)  # Denormalization
 
     # ###========================== DEFINE TRAIN OPS ==========================###
     lambda_k = 0.001
     gamma = 0.7
     k_t = tf.Variable(0., trainable=False, name='k_t')
 
-    # g_vars = tl.layers.get_variables_with_name('generator', True, True)
-    # d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
-    # with tf.variable_scope('learning_rate'):
-    #     lr = tf.Variable(0.00008, trainable=False)
-    #
-    # d_loss_real = tf.reduce_mean(tf.abs(ae_real - images))
-    # d_loss_fake = tf.reduce_mean(tf.abs(ae_gen - output_gen))
-    # d_loss = d_loss_real - k_t * d_loss_fake
-    #
-    # g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
-    #
-    # g_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
-    # d_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
-    #
-    # balance = gamma * d_loss_real - g_loss
-    # with tf.control_dependencies([d_optim, g_optim]):
-    #     k_update = tf.assign(k_t, tf.clip_by_value(k_t + lambda_k * balance, 0, 1))
-    #
-    # m_global = d_loss_real + tf.abs(balance)
+    g_vars = tl.layers.get_variables_with_name('generator', True, True)
+    d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
+    with tf.variable_scope('learning_rate'):
+        lr = tf.Variable(0.00008, trainable=False)
+
+    d_loss_real = tf.reduce_mean(tf.abs(ae_real - images))
+    d_loss_fake = tf.reduce_mean(tf.abs(ae_gen - output_gen))
+    d_loss = d_loss_real - k_t * d_loss_fake
+
+    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
+
+    g_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
+    d_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
+
+    balance = gamma * d_loss_real - g_loss
+    with tf.control_dependencies([d_optim, g_optim]):
+        k_update = tf.assign(k_t, tf.clip_by_value(k_t + lambda_k * balance, 0, 1))
+
+    m_global = d_loss_real + tf.abs(balance)
 
     with tf.Session() as sess:
-        # init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-        # sess.run(init_op)
+        init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+        sess.run(init_op)
 
         if args.resume == "True":
             print("Restoring model from checkpoint")
             restore_model(sess, args.checkpoint_dir)
 
-        # items_faces, items_audio = dataset.get_items()
-        # total = 0
+        items_faces, items_audio = dataset.get_items()
+        total = 0
         for iteration in range(0, 10):
-            # input_images = np.empty([batch_size, 64, 64, 3])
-            # count = 0
-            # for face in items_faces[iteration * batch_size:iteration * batch_size + batch_size]:
-            #     input_image = Image.open(face)
-            #     input_image = np.asarray(input_image, dtype=float)
-            #     input_images[count] = input_image
-            #     count += 1
+            input_images = np.empty([batch_size, 64, 64, 3])
+            count = 0
+            for face in items_faces[iteration * batch_size:iteration * batch_size + batch_size]:
+                input_image = Image.open(face)
+                input_image = np.asarray(input_image, dtype=float)
+                input_images[count] = input_image
+                count += 1
             input_z = np.random.uniform(0, 0, size=[batch_size, 64])
             print "Input vector: {}".format(input_z[0, :50])
-            output_image = sess.run(output_gen, feed_dict={z: input_z})[0]
+            output_image = sess.run(output_gen, feed_dict={images: input_images, z: input_z})[0]
 
             ima = Image.fromarray(output_image.astype(np.uint8), 'RGB')
             ima.save("test_image_{}.png".format(iteration))
             iteration += 1
-
+            total += 1
 
 
 if __name__ == '__main__':
