@@ -111,7 +111,7 @@
 				</header>
 				<div class="container">
 					<div class="row">
-						<div class="6u">
+						<div class="7u">
 							<section>
 								<h2>Audio</h2>
 								<a class="image fit"><img src="images/6.png" alt="" /></a>
@@ -121,10 +121,10 @@
 								As the input videos provides us with a 30 faces per second, we decided to get 35ms audio frames to avoid overlapping and 60ms frames to get 50% overlapping. For each audio frame we compute the MFCC coefficients on a sliding window with 50% overlap so we obtain a 2D heat map for every audio frame that shows the evolution of the MFCC.</p>
 							</section>
 						</div>
-						<div class="6u">
+						<div class="5u">
 							<section>
 								<h2>Faces</h2>
-								<a class="image fit"><img src="images/10.jpg" alt="" /></a>
+								<a class="image fit"><img src="images/12.jpeg" alt="" /></a>
 								<p> In order to extract the face we resorted to the well known library for computer vision [OpenCV](https://opencv.org/). Using this library we extracted each frame of the video, then we processed each frame independently to extract the face. On the first iteration of our project we used the Viola Jones face detector. It worked pretty well but had some problems such as a high false positive rate and the fact that the faces where not centered inside the bounding box. To overcome this drawbacks and obtain a better dataset with less variance we changed the face detection algorithm.</p>
 							</section>
 						</div>
