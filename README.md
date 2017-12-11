@@ -48,8 +48,14 @@ We can see here the evolution of the variable Kt and MGlobal. As can be seen MGl
 The last trick we tried to overcome the situation, was to reduce even more the learning rate and also reduce the batch size to just one image. In that case we were able in training time to generate faces from both of the videos used for training (previously the network was only generating a face corresponding to one of the videos). But finally, when testing we were again generating the same face.
 <img src="docs/9.png" alt="hi" width="569" height="198" class="inline"/> 
 
+### VAE
+BLAH BLAH
+
 ### FUTURE WORK
-BLAH BLAH 
+BLAH BLAH
+
+### REFERENCES
+[1] David Berthelot, Thomas Schumm, Luke Metz [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf) 
 
 
 
