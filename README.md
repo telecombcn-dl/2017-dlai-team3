@@ -13,7 +13,10 @@ In order to train our network, we have also created our own dataset as we did no
 To do so, first we extracted videos from the youtube platform. Then, we cropped them on the parts where Trump was speaking and we extracted the images and audio using a python script that we developed for such task.
 We wanted to have well centered faces and with the cleanest audio possible, for that reason we chosed to download videos from Donald Trump public speeches.
 Once the videos were selected, we had to process them to obtain both the face and the audio corresponding to the face. 
-BLAH BLAH BLAH BLAH BLAH
+
+### FACE EXTRACTION AND PRE-PROCESSING
+
+
 
 
 ### AUDIO FEATURE EXTRACTION
