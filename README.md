@@ -16,7 +16,7 @@ Once the videos were selected, we had to process them to obtain both the face an
 
 ### FACE EXTRACTION AND PRE-PROCESSING
 
-In order to extract the face we resorted to the well known library for computer vision [OpenCV](https://opencv.org/). Using this library we extracted each frame of the video, then we processed each frame independently to extract the face. On the first iteration of our project we used the Viola Jones face detector. It worked pretty well but had some problems such as a high false positive rate and the fact that the faces where not centered inside the bounding box. 
+In order to extract the face we resorted to the well known library for computer vision [OpenCV](https://opencv.org/). Using this library we extracted each frame of the video, then we processed each frame independently to extract the face. On the first iteration of our project we used the Viola Jones face detector. It worked pretty well but had some problems such as a high false positive rate and the fact that the faces where not centered inside the bounding box. To overcome this drawbacks and obtain a better dataset with less variance we changed the face detection algorithm.
 
 
 ### AUDIO FEATURE EXTRACTION
