@@ -126,7 +126,16 @@
 						<section>
 							<h2>Faces</h2>
 							<a class="image fit"><img src="images/12.jpeg" alt="" /></a>
-							<p> In order to extract the face we resorted to the well known library for computer vision [OpenCV](https://opencv.org/). Using this library we extracted each frame of the video, then we processed each frame independently to extract the face. On the first iteration of our project we used the Viola Jones face detector. It worked pretty well but had some problems such as a high false positive rate and the fact that the faces where not centered inside the bounding box. To overcome this drawbacks and obtain a better dataset with less variance we changed the face detection algorithm.</p>
+							<p> In order to extract the face we resorted to the well known library for computer vision [OpenCV](https://opencv.org/). 
+							Using this library we extracted each frame of the video, then we processed each frame independently to extract the face. 
+							On the first iteration of our project we used the Viola Jones face detector. It worked pretty well but had some problems 
+							such as a high false positive rate and the fact that the faces where not centered inside the bounding box. 
+							To overcome this drawbacks and obtain a better dataset with less variance we changed the face detection algorithm. <br>
+							In this case, we used the algorithm proposed by Kaipeng Zhang et al. in [Joint Face Detection and Alignment using Multi-Task Cascaded Convolutional Networks]. 
+							This algorithm not only detects faces but also aligns them, providing then a more homogeneous dataset which will make our final task easier.
+							In a nutshell, the method proposed consists of 3 stages. In the first stage, it produces candidate windows quickly through a shallow CNN. 
+							Then, it refines the windows to reject a large number of non-faces. Finally, it uses a more powerful CNN to refine the result and ouput facial landmarks that will be used to align the face. All these 3 process are done at different scale levels. <br>
+							A tensorflow implementation of this algorithm can be found here: <a href="https://github.com/kpzhang93/MTCNN_face_detection_alignment/">https://github.com/kpzhang93/MTCNN_face_detection_alignment/</a></p>
 						</section>
 					</div>
 				</div>
