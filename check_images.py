@@ -4,6 +4,7 @@ import numpy as np
 from scipy.misc import imsave
 from skimage.exposure import histogram
 
+data_path_faces = "/storage/dataset"
 
 if __name__ == '__main__':
     threshold = 700
@@ -30,7 +31,8 @@ if __name__ == '__main__':
     bins_reference_mean = np.mean(bins_references, axis=0)
 
     distance = 0
-    for face in items_faces[0:10]:
+    for face in items_faces:
+        print(count)
         input_image = Image.open(face)
         input_image = np.asarray(input_image, dtype=float)
         input_image_segment = input_image[:, 0:10, :]
@@ -38,6 +40,9 @@ if __name__ == '__main__':
         distance = np.sum(np.abs(hist_input - hist_reference_mean))
         if distance > threshold:
             input_image = np.flip(input_image, axis=1)
-            imsave(str(str(count) + ".jpg"), np.asarray(input_image, dtype=int))
+        name = face.replace('face', 'facechecked')
+        print(name)
+        imsave(name, np.asarray(input_image, dtype=int))
         input_images[count] = input_image
         count += 1
+
