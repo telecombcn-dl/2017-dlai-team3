@@ -53,10 +53,10 @@ class DataInput(object):
     def get_items(self):
         # image_list = [os.path.join(self.path_faces, f) for f in os.listdir(self.path_faces)
         #               if os.path.isfile(os.path.join(self.path_faces, f)) and
-        #               '_face_' in f and 'eMLs9XkrVj0' in f]
+        #               '_face_' in f]
         image_list = [os.path.join(self.path_faces, f) for f in os.listdir(self.path_faces)
                       if os.path.isfile(os.path.join(self.path_faces, f)) and
-                      '_face_' in f]
+                      '_face_' in f and 'eMLs9XkrVj0' in f]
 
         audio_list = [(item.replace(self.path_faces, self.path_audio)) for item in image_list]
         audio_list = [(item.replace("_face_", "_MFCC2_")) for item in audio_list]
@@ -69,7 +69,7 @@ class DataInput(object):
         items_faces, items_audio = self.get_items()
         print(len(items_faces))
         faces = np.empty([batch_size, 64, 64, 3])
-        audios = np.empty([batch_size, 60, 12, 1])
+        audios = np.empty([batch_size, 35, 11, 1])
         count = 0
         for face, audio in zip(items_faces[iteration*batch_size:iteration*batch_size+batch_size],
                                items_audio[iteration*batch_size:iteration*batch_size+batch_size]):
