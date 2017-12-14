@@ -176,8 +176,8 @@ def train(batch_size, epochs, dataset, log_dir):
     global_step = tf.Variable(0, name='global_step', trainable=False)
     image_width = 64
     image_height = 64
-    audio_width = 11
     audio_height = 35
+    audio_width = 11
 
     # ##========================== DEFINE INPUT DATA ============================###
     images = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_image_generator')
