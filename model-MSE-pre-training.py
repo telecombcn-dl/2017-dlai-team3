@@ -226,9 +226,8 @@ def train(batch_size, epochs, dataset, log_dir):
 
     m_global = d_loss_real + tf.abs(balance)
 
-    # tf.summary.scalar('m_global', m_global)
-    # tf.summary.scalar('k_t', k_t)
-    # tf.summary.scalar('learning_rate', lr)
+    tf.summary.scalar('m_global', m_global)
+    tf.summary.scalar('k_t', k_t)
     tf.summary.scalar('MSE_loss', g_MSE)
 
     summary = tf.summary.merge_all()
@@ -262,18 +261,19 @@ def train(batch_size, epochs, dataset, log_dir):
                     audio_MFCC[count] = input_audio[:, :, np.newaxis]
                     count += 1
                 # ##========================= train BEGAN =========================###
-                # kt, mGlobal, summary_str = sess.run([k_update, m_global, summary], feed_dict={images: input_images,
-                #                                                                               audio: audio_MFCC})
-                _, summary_str, MSE_loss = sess.run([g_MSE_optim, summary, g_MSE], feed_dict={images: input_images,
-                                                                                    audio: audio_MFCC})
-                # print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
-                print("Epoch: {} Iteration: {} MSE_loss: {}.".format(j, iteration, MSE_loss))
-                summary_writer.add_summary(summary_str, total)
-
-                # summary_writer.flush()
+                if j < 6:
+                    _, summary_str, MSE_loss = sess.run([g_MSE_optim, summary, g_MSE], feed_dict={images: input_images,
+                                                                                                  audio: audio_MFCC})
+                    print("PRE-TRAINING GENERATOR -- Epoch: {} Iteration: {} MSE_loss: {}.".format(j, iteration, MSE_loss))
+                    summary_writer.add_summary(summary_str, total)
+                else:
+                    kt, mGlobal, summary_str = sess.run([k_update, m_global, summary], feed_dict={images: input_images,
+                                                                                                   audio: audio_MFCC})
+                    print("TRAINING BEGAN -- Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
+                    summary_writer.add_summary(summary_str, total)
 
                 # ##========================= save checkpoint =========================###
-                if iteration % 3630 == 0 and iteration > 0:
+                if iteration % 3000 == 0 and iteration > 0:
                     tf.logging.info('Saving checkpoint')
                     saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
                 iteration += 1
@@ -291,11 +291,17 @@ def train(batch_size, epochs, dataset, log_dir):
                     input_audio = np.asarray(input_audio, dtype=float)
                     audio_MFCC[count] = input_audio[:, :, np.newaxis]
                     count += 1
-                # ##========================= train SRGAN =========================###
-                kt, mGlobal, summary_str = sess.run([k_update, m_global, summary], feed_dict={images: input_images,
-                                                                                              audio: audio_MFCC})
-                print("Iteration: %2d kt: %.8f Mglobal: %.8f." % (iteration, kt, mGlobal))
-                summary_writer.add_summary(summary_str, iteration)
+                # ##========================= train BEGAN =========================###
+                if j < 6:
+                    _, summary_str, MSE_loss = sess.run([g_MSE_optim, summary, g_MSE], feed_dict={images: input_images,
+                                                                                                  audio: audio_MFCC})
+                    print("PRE-TRAINING GENERATOR -- Epoch: {} Iteration: {} MSE_loss: {}.".format(j, iteration, MSE_loss))
+                    summary_writer.add_summary(summary_str, total)
+                else:
+                    kt, mGlobal, summary_str = sess.run([k_update, m_global, summary], feed_dict={images: input_images,
+                                                                                                   audio: audio_MFCC})
+                    print("TRAINING BEGAN -- Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
+                    summary_writer.add_summary(summary_str, total)
 
 
 if __name__ == '__main__':
@@ -316,5 +322,5 @@ if __name__ == '__main__':
     if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
         os.mkdir(os.path.dirname(args.checkpoint_dir))
 
-    train(batch_size=16, epochs=10, dataset=DataInput(args.dataset_faces_folder,
+    train(batch_size=16, epochs=20, dataset=DataInput(args.dataset_faces_folder,
                                                       args.dataset_audios_folder, "train"), log_dir=args.log_dir)
