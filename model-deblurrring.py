@@ -38,30 +38,36 @@ def generator(gen_in, reuse, hidden_number=64, kernel=3):
         # Down-sampling is implemented as sub-sampling with stride 2 and up- sampling is done by nearest neighbor.
         x = InputLayer(gen_in, name="in")
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Generator/conv0')
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv0a')
+        input_1_skip = x
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv2')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling1')  # method= 1 NN
+        x = ElementwiseLayer([x, input_1_skip], tf.add, name='Generator/skip1')
 
+        input_2_skip = x
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv3')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv4')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Encoder/UpSampling2')  # method= 1 NN
+        x = ElementwiseLayer([x, input_2_skip], tf.add, name='Generator/skip2')
 
+        input_3_skip = x
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv5')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv6')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling3')  # method= 1 NN
+        x = ElementwiseLayer([x, input_3_skip], tf.add, name='Generator/skip3')
 
+        input_4_skip = x
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1],
                         padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv7')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv8')
+        x = ElementwiseLayer([x, input_4_skip], tf.add, name='Generator/skip4')
+
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 3], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, name='Generator/convLAST')
 
