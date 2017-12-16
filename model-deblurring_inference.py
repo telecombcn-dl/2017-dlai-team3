@@ -177,12 +177,21 @@ def test(batch_size, epochs, dataset, log_dir):
         for i, face_blurry in enumerate(items_faces_blurry[0:100]):
             input_image = Image.open(face_blurry)
             input_image = np.asarray(input_image, dtype=float)
-            input_images_blurry = norm_img(input_image.reshape([1, 64, 64, 3]))
+            input_blurry_0 = gaussian_filter(input_image[:, :, 0], sigma=2)
+            input_blurry_1 = gaussian_filter(input_image[:, :, 1], sigma=2)
+            input_blurry_2 = gaussian_filter(input_image[:, :, 2], sigma=2)
+            input_images_blurry = np.empty([1, 64, 64, 3])
+            input_images_blurry[:, :, :, 0] = input_blurry_0
+            input_images_blurry[:, :, :, 1] = input_blurry_1
+            input_images_blurry[:, :, :, 2] = input_blurry_2
+            input_images_blurry = norm_img(input_images_blurry)
 
             output_image = sess.run(output_gen, feed_dict={generator_input: input_images_blurry})[0]
 
             ima = Image.fromarray(output_image.astype(np.uint8), 'RGB')
             ima.save("test_image_{}.png".format(i))
+            ima = Image.fromarray(input_image.astype(np.uint8), 'RGB')
+            ima.save("input_image_{}.png".format(i))
 
 
 if __name__ == '__main__':
