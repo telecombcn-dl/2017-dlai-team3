@@ -38,6 +38,7 @@ def generator(gen_in, reuse, hidden_number=64, kernel=3):
         # even better visual results
         # Down-sampling is implemented as sub-sampling with stride 2 and up- sampling is done by nearest neighbor.
         x = InputLayer(gen_in, name="in")
+
         x = Conv2dLayer(x, shape=[kernel, kernel, 3, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv0')
         input_1_skip = x
