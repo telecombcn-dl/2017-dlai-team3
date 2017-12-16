@@ -243,17 +243,17 @@ def train(batch_size, epochs, dataset, log_dir):
                     input_image = np.asarray(input_image, dtype=float)
                     input_images[count] = input_image
                     # Blurry images
-                    input_blurry_0 = gaussian_filter(input_image[:, :, 0], sigma=2)
-                    input_blurry_1 = gaussian_filter(input_image[:, :, 1], sigma=2)
-                    input_blurry_2 = gaussian_filter(input_image[:, :, 2], sigma=2)
-                    input_images_blurry[count, :, :, 0] = input_blurry_0
-                    input_images_blurry[count, :, :, 1] = input_blurry_1
-                    input_images_blurry[count, :, :, 2] = input_blurry_2
+                    # input_blurry_0 = gaussian_filter(input_image[:, :, 0], sigma=2)
+                    # input_blurry_1 = gaussian_filter(input_image[:, :, 1], sigma=2)
+                    # input_blurry_2 = gaussian_filter(input_image[:, :, 2], sigma=2)
+                    # input_images_blurry[count, :, :, 0] = input_blurry_0
+                    # input_images_blurry[count, :, :, 1] = input_blurry_1
+                    # input_images_blurry[count, :, :, 2] = input_blurry_2
 
-                    # input_image = Image.open(face_blurry)
-                    # input_image = np.asarray(input_image, dtype=float)
-                    # input_images_blurry[count] = input_image
-                    # count += 1
+                    input_image = Image.open(face_blurry)
+                    input_image = np.asarray(input_image, dtype=float)
+                    input_images_blurry[count] = input_image
+                    count += 1
 
                 # ##========================= train BEGAN =========================###
                 kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],

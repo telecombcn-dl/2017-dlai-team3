@@ -70,7 +70,7 @@ class DataInput(object):
                       '_facechecked_' in f and 'eMLs9XkrVj0' in f]
 
         image_list_blurry = [(item.replace(self.path_faces, "/storage/MSE_output")) for item in image_list]
-        return image_list, image_list_blurry
+        return image_list[0: int(0.8*len(image_list))], image_list_blurry[0: int(0.8*len(image_list_blurry))]
 
     def input_images_audios(self, batch_size, iteration):
         print("Called input images audio")
