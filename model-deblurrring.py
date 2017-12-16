@@ -7,6 +7,7 @@ import argparse
 from PIL import Image
 
 DEFAULT_DATA_FACES_PATH = "/storage/dataset"
+DEFAULT_DATA_FACES_BLURRY_PATH = "/storage/MSE_output"
 DEFAULT_DATA_AUDIOS_PATH = "/storage/dataset_videos/cropped_videos/outputb"
 DEFAULT_LOG_DIR = "/storage/logs"
 DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
@@ -192,7 +193,7 @@ def train(batch_size, epochs, dataset, log_dir):
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen - output_gen))
     d_loss = d_loss_real - k_t * d_loss_fake
 
-    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen)) + tf.losses.mean_squared_error(output_gen,images)
+    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen)) + tf.losses.mean_squared_error(output_gen, images)
 
     g_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
     d_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
@@ -221,22 +222,29 @@ def train(batch_size, epochs, dataset, log_dir):
             print("Restoring model from checkpoint")
             restore_model(sess, args.checkpoint_dir)
 
-        items_faces, items_audio = dataset.get_items()
+        items_faces, items_faces_blurry = dataset.get_items()
         total = 0
         for j in range(0, epochs):
             iteration = 0
             while iteration * batch_size < len(items_faces):
                 input_images = np.empty([batch_size, 64, 64, 3])
+                input_images_blurry = np.empty([batch_size, 64, 64, 3])
                 count = 0
-                for face in items_faces[iteration * batch_size:iteration * batch_size + batch_size]:
+                for face, face_blurry in zip(items_faces[iteration * batch_size:iteration * batch_size + batch_size],
+                                             items_faces_blurry[iteration * batch_size:iteration * batch_size + batch_size]):
+                    # Normal images
                     input_image = Image.open(face)
                     input_image = np.asarray(input_image, dtype=float)
                     input_images[count] = input_image
+                    # Blurry images
+                    input_image = Image.open(face_blurry)
+                    input_image = np.asarray(input_image, dtype=float)
+                    input_images_blurry[count] = input_image
                     count += 1
-                input_z = np.random.uniform(-1., 1, size=[batch_size, 64])
                 # ##========================= train BEGAN =========================###
                 kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
-                                       feed_dict={images: input_images, generator_input: AQUI IMAGE BLURRY})
+                                                    feed_dict={images: input_images,
+                                                               generator_input: input_images_blurry})
                 summary_writer.add_summary(summary_str, total)
                 if iteration % 16 == 0 and iteration > 0:
                     print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
@@ -251,15 +259,22 @@ def train(batch_size, epochs, dataset, log_dir):
             if rest > 0:
                 count = 0
                 input_images = np.empty([rest, 64, 64, 3])
-                for face in items_faces[len(items_faces) - rest:]:
+                input_images_blurry = np.empty([rest, 64, 64, 3])
+                for face, face_blurry in zip(items_faces[len(items_faces) - rest:],
+                                             items_faces_blurry[len(items_faces_blurry) - rest:]):
+                    # Normal images
                     input_image = Image.open(face)
                     input_image = np.asarray(input_image, dtype=float)
                     input_images[count] = input_image
+                    # Blurry images
+                    input_image = Image.open(face_blurry)
+                    input_image = np.asarray(input_image, dtype=float)
+                    input_images_blurry[count] = input_image
                     count += 1
-                input_z = np.random.uniform(-1., 1, size=[rest, 64])
-                # ##========================= train BEGAN =========================###
+                    # ##========================= train BEGAN =========================###
                 kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
-                                                    feed_dict={images: input_images, z: input_z})
+                                                    feed_dict={images: input_images,
+                                                               generator_input: input_images_blurry})
                 print("Iteration: %2d kt: %.8f Mglobal: %.8f." % (iteration, kt, mGlobal))
                 summary_writer.add_summary(summary_str, iteration)
 

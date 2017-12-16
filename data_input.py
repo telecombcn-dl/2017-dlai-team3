@@ -61,9 +61,16 @@ class DataInput(object):
         audio_list = [(item.replace(self.path_faces, self.path_audio)) for item in image_list]
         audio_list = [(item.replace("_facechecked_", "_MFCC2_")) for item in audio_list]
         audio_list = [(item.replace(".jpg", ".npy")) for item in audio_list]
-        print audio_list[0]
 
         return image_list, audio_list
+
+    def get_items_blurry(self):
+        image_list = [os.path.join(self.path_faces, f) for f in os.listdir(self.path_faces)
+                      if os.path.isfile(os.path.join(self.path_faces, f)) and
+                      '_facechecked_' in f and 'eMLs9XkrVj0' in f]
+
+        image_list_blurry = [(item.replace(self.path_faces, "/storage/MSE_output")) for item in image_list]
+        return image_list, image_list_blurry
 
     def input_images_audios(self, batch_size, iteration):
         print("Called input images audio")

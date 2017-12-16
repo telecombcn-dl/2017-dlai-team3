@@ -8,6 +8,7 @@ import argparse
 from PIL import Image
 
 DEFAULT_DATA_FACES_PATH = "/storage/dataset"
+DEFAULT_OUTPUT_DATA_FACES_PATH = "/storage/MSE_output"
 DEFAULT_DATA_AUDIOS_PATH = "/storage/dataset_videos/cropped_videos/outputb"
 DEFAULT_LOG_DIR = "/storage/logs"
 DEFAULT_CHECKPOINT_DIR = "/storage/checkpoints"
@@ -170,6 +171,7 @@ def discriminator(disc_input, reuse, z_num=64, hidden_number=128, kernel=3):
 
 
 def train(batch_size, epochs, dataset, log_dir):
+    # global_step = tf.Variable(0, name='global_step', trainable=False)
     image_width = 64
     image_height = 64
     audio_height = 35
@@ -178,30 +180,13 @@ def train(batch_size, epochs, dataset, log_dir):
     # ##========================== DEFINE INPUT DATA ============================###
     images = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_image_generator')
     audio = tf.placeholder('float32', [None, audio_height, audio_width, 1], name='t_audio_input_generator')
-    tf.summary.image('input_image', images)
-    tf.summary.image('audio', audio)
 
     # ##========================== DEFINE MODEL ============================###
     net_gen = generator(input_audio=audio, reuse=False)
-    tf.summary.image('norm_generated_image', net_gen.outputs)
-    tf.summary.image('generated_image', denorm_img(net_gen.outputs))
 
     output_gen = denorm_img(net_gen.outputs)  # Denormalization
 
-    g_vars = tl.layers.get_variables_with_name('generator', True, True)
-
-    lr = tf.Variable(0.00004, trainable=False)
-
-    g_MSE = tf.reduce_mean(tf.square(images - output_gen), name='g_loss_gan')
-
-    g_MSE_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(g_MSE, var_list=g_vars)
-    tf.summary.scalar('MSE_loss', g_MSE)
-
-    summary = tf.summary.merge_all()
     with tf.Session() as sess:
-        saver = tf.train.Saver(max_to_keep=1)
-        # Summary writer to save logs
-        summary_writer = tf.summary.FileWriter(os.path.join(log_dir, 'train'), sess.graph)
 
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         sess.run(init_op)
@@ -212,51 +197,55 @@ def train(batch_size, epochs, dataset, log_dir):
 
         items_faces, items_audio = dataset.get_items()
         total = 0
-        for j in range(0, epochs):
-            iteration = 0
-            while iteration * batch_size < len(items_faces):
-                input_images = np.empty([batch_size, 64, 64, 3])
-                audio_MFCC = np.empty([batch_size, 35, 11, 1])
-                count = 0
-                for face, input_audio in zip(items_faces[iteration * batch_size:iteration * batch_size + batch_size],
-                                             items_audio[iteration * batch_size:iteration * batch_size + batch_size]):
-                    input_image = Image.open(face)
-                    input_image = np.asarray(input_image, dtype=float)
-                    input_images[count] = input_image
-                    input_audio = np.load(input_audio)
-                    input_audio = np.asarray(input_audio, dtype=float)
-                    audio_MFCC[count] = input_audio[:, :, np.newaxis]
-                    count += 1
-                # ##========================= train BEGAN =========================###
-                _, summary_str, MSE_loss = sess.run([g_MSE_optim, summary, g_MSE], feed_dict={images: input_images,
-                                                                                              audio: audio_MFCC})
-                print("PRE-TRAINING GENERATOR -- Epoch: {} Iteration: {} MSE_loss: {}.".format(j, iteration, MSE_loss))
-                summary_writer.add_summary(summary_str, total)
+        iteration = 0
+        while iteration * batch_size < len(items_faces):
+            input_images = np.empty([batch_size, 64, 64, 3])
+            audio_MFCC = np.empty([batch_size, 35, 11, 1])
+            count = 0
+            output_files = []
+            for face, input_audio in zip(items_faces[iteration * batch_size:iteration * batch_size + batch_size],
+                                         items_audio[iteration * batch_size:iteration * batch_size + batch_size]):
+                input_image = Image.open(face)
+                input_image = np.asarray(input_image, dtype=float)
+                input_images[count] = input_image
+                input_audio = np.load(input_audio)
+                input_audio = np.asarray(input_audio, dtype=float)
+                audio_MFCC[count] = input_audio[:, :, np.newaxis]
+                output_files.append(face.replace(DEFAULT_DATA_FACES_PATH, DEFAULT_OUTPUT_DATA_FACES_PATH))
+                count += 1
 
-                # ##========================= save checkpoint =========================###
-                if iteration % 3000 == 0 and iteration > 0:
-                    tf.logging.info('Saving checkpoint')
-                    saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
-                iteration += 1
-                total += 1
-            rest = len(items_faces) - ((iteration - 1)*batch_size)
-            if rest > 0:
-                count = 0
-                input_images = np.empty([rest, 64, 64, 3])
-                audio_MFCC = np.empty([rest, 35, 11, 1])
-                for face, input_audio in zip(items_faces[len(items_faces)-rest:], items_audio[len(items_faces)-rest:]):
-                    input_image = Image.open(face)
-                    input_image = np.asarray(input_image, dtype=float)
-                    input_images[count] = input_image
-                    input_audio = np.load(input_audio)
-                    input_audio = np.asarray(input_audio, dtype=float)
-                    audio_MFCC[count] = input_audio[:, :, np.newaxis]
-                    count += 1
-                # ##========================= train BEGAN =========================###
-                _, summary_str, MSE_loss = sess.run([g_MSE_optim, summary, g_MSE], feed_dict={images: input_images,
-                                                                                              audio: audio_MFCC})
-                print("PRE-TRAINING GENERATOR -- Epoch: {} Iteration: {} MSE_loss: {}.".format(j, iteration, MSE_loss))
-                summary_writer.add_summary(summary_str, total)
+            output_images = sess.run(output_gen, feed_dict={images: input_images, audio: audio_MFCC})
+            save_image_counter = 0
+
+            for out_ima in output_images:
+                ima = Image.fromarray(out_ima.astype(np.uint8), 'RGB')
+                ima.save(output_files[save_image_counter])
+                save_image_counter += 1
+            iteration += 1
+            total += 1
+
+        rest = len(items_faces) - ((iteration - 1)*batch_size)
+        if rest > 0:
+            save_image_counter = 0
+            output_files = []
+            count = 0
+            input_images = np.empty([rest, 64, 64, 3])
+            audio_MFCC = np.empty([rest, 35, 11, 1])
+            for face, input_audio in zip(items_faces[len(items_faces)-rest:], items_audio[len(items_faces)-rest:]):
+                input_image = Image.open(face)
+                input_image = np.asarray(input_image, dtype=float)
+                input_images[count] = input_image
+                input_audio = np.load(input_audio)
+                input_audio = np.asarray(input_audio, dtype=float)
+                audio_MFCC[count] = input_audio[:, :, np.newaxis]
+                output_files.append(face.replace(DEFAULT_DATA_FACES_PATH, DEFAULT_OUTPUT_DATA_FACES_PATH))
+                count += 1
+
+            output_images = sess.run(output_gen, feed_dict={images: input_images, audio: audio_MFCC})
+            for out_ima in output_images:
+                ima = Image.fromarray(out_ima.astype(np.uint8), 'RGB')
+                ima.save(output_files[save_image_counter])
+                save_image_counter += 1
 
 
 if __name__ == '__main__':
