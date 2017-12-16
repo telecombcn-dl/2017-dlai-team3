@@ -37,9 +37,8 @@ def generator(gen_in, reuse, hidden_number=64, kernel=3):
         # even better visual results
         # Down-sampling is implemented as sub-sampling with stride 2 and up- sampling is done by nearest neighbor.
         x = InputLayer(gen_in, name="in")
-        x = DenseLayer(x, n_units=8 * 8 * hidden_number, name='Generator/dense2')
-        arguments = {'shape': [-1, 8, 8, hidden_number], 'name': 'Generator/reshape1'}
-        x = LambdaLayer(x, fn=tf.reshape, fn_args=arguments)
+        x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
+                        W_init=w_init, act=tf.nn.elu, name='Generator/conv0')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
                         W_init=w_init, act=tf.nn.elu, name='Generator/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
