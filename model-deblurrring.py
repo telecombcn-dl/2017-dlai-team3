@@ -187,7 +187,7 @@ def train(batch_size, epochs, dataset, log_dir):
     d_loss_fake = tf.reduce_mean(tf.abs(ae_gen - output_gen))
     d_loss = d_loss_real - k_t * d_loss_fake
 
-    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen))
+    g_loss = tf.reduce_mean(tf.abs(ae_gen - output_gen)) + tf.losses.mean_squared_error(output_gen,images)
 
     g_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
     d_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
@@ -231,7 +231,7 @@ def train(batch_size, epochs, dataset, log_dir):
                 input_z = np.random.uniform(-1., 1, size=[batch_size, 64])
                 # ##========================= train BEGAN =========================###
                 kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
-                                       feed_dict={images: input_images, z: input_z})
+                                       feed_dict={images: input_images, generator_input: AQUI IMAGE BLURRY})
                 summary_writer.add_summary(summary_str, total)
                 if iteration % 16 == 0 and iteration > 0:
                     print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
