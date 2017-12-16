@@ -223,7 +223,7 @@ def train(batch_size, epochs, dataset, log_dir):
             print("Restoring model from checkpoint")
             restore_model(sess, args.checkpoint_dir)
 
-        items_faces, items_faces_blurry = dataset.get_items()
+        items_faces, items_faces_blurry = dataset.get_items_blurry()
         total = 0
         for j in range(0, epochs):
             iteration = 0
