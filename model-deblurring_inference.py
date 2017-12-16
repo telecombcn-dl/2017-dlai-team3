@@ -158,139 +158,31 @@ def discriminator(disc_input, reuse, z_num=64, hidden_number=64, kernel=3):
         return x, z
 
 
-def train(batch_size, epochs, dataset, log_dir):
-    global_step = tf.Variable(0, name='global_step', trainable=False)
-    image_width = 64
-    image_height = 64
-
+def test(batch_size, epochs, dataset, log_dir):
     # ##========================== DEFINE INPUT DATA ============================###
-    images = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_image_input')
-    generator_input = tf.placeholder('float32', [None, image_height, image_width, 3], name='t_input_generator')
-    tf.summary.image('input_image', images)
-    tf.summary.image('generator_input', generator_input)
-    images_normalized = norm_img(images)  # Normalization
-    generator_input_normalized = norm_img(generator_input)
+    generator_input = tf.placeholder('float32', [None, 64, 64, 3], name='t_input_generator')
 
     # ##========================== DEFINE MODEL ============================###
-    net_gen = generator(gen_in=generator_input_normalized , reuse=False)
-    tf.summary.image('norm_generated_image', net_gen.outputs)
-    tf.summary.image('generated_image', denorm_img(net_gen.outputs))
-    net_d, d_z = discriminator(disc_input=tf.concat([net_gen.outputs, images_normalized], axis=0), reuse=False)
-    net_d_false, net_d_real = tf.split(net_d.outputs, num_or_size_splits=2, axis=0)
-    tf.summary.image('autoencoder_real', denorm_img(net_d_real))
-    tf.summary.image('autoencoder_fake', denorm_img(net_d_false))
+    net_gen = generator(gen_in=generator_input, reuse=False)
 
     output_gen = denorm_img(net_gen.outputs)  # Denormalization
-    ae_gen, ae_real = denorm_img(net_d_false), denorm_img(net_d_real)  # Denormalization
 
-    # ###========================== DEFINE TRAIN OPS ==========================###
-    lambda_k = 0.001
-    gamma = 0.7
-    k_t = tf.Variable(0., trainable=False, name='k_t')
-
-    g_vars = tl.layers.get_variables_with_name('generator', True, True)
-    d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
-    with tf.variable_scope('learning_rate'):
-        lr = tf.Variable(0.00004, trainable=False)
-
-    d_loss_real = tf.reduce_mean(tf.abs(ae_real - images))
-    d_loss_fake = tf.reduce_mean(tf.abs(ae_gen - output_gen))
-    d_loss = d_loss_real - k_t * d_loss_fake
-
-    g_loss_MSE = 1e-2*tf.losses.mean_squared_error(output_gen, images)
-    g_loss_adv = tf.reduce_mean(tf.abs(ae_gen - output_gen))
-    g_loss = g_loss_adv + g_loss_MSE
-
-    g_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(g_loss, var_list=g_vars, global_step=global_step)
-    d_optim = tf.train.AdamOptimizer(learning_rate=lr).minimize(d_loss, var_list=d_vars, global_step=global_step)
-
-    balance = gamma * d_loss_real - g_loss_adv
-    with tf.control_dependencies([d_optim, g_optim]):
-        k_update = tf.assign(k_t, tf.clip_by_value(k_t + lambda_k * balance, 0, 1))
-
-    m_global = d_loss_real + tf.abs(balance)
-
-    tf.summary.scalar('m_global', m_global)
-    tf.summary.scalar('g_loss', g_loss)
-    tf.summary.scalar('d_loss', d_loss)
-    tf.summary.scalar('k_t', k_t)
-
-    summary = tf.summary.merge_all()
     with tf.Session() as sess:
-        saver = tf.train.Saver(max_to_keep=1)
-        # Summary writer to save logs
-        summary_writer = tf.summary.FileWriter(os.path.join(log_dir, 'train'), sess.graph)
-
-        init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-        sess.run(init_op)
-
         if args.resume == "True":
             print("Restoring model from checkpoint")
             restore_model(sess, args.checkpoint_dir)
 
-        items_faces, items_faces_blurry = dataset.get_items_blurry()
-        total = 0
-        for j in range(0, epochs):
-            iteration = 0
-            while iteration * batch_size < len(items_faces):
-                input_images = np.empty([batch_size, 64, 64, 3])
-                input_images_blurry = np.empty([batch_size, 64, 64, 3])
-                count = 0
-                for face, face_blurry in zip(items_faces[iteration * batch_size:iteration * batch_size + batch_size],
-                                             items_faces_blurry[iteration * batch_size:iteration * batch_size + batch_size]):
-                    # Normal images
-                    input_image = Image.open(face)
-                    input_image = np.asarray(input_image, dtype=float)
-                    input_images[count] = input_image
-                    # Blurry images
-                    input_blurry_0 = gaussian_filter(input_image[:, :, 0], sigma=2)
-                    input_blurry_1 = gaussian_filter(input_image[:, :, 1], sigma=2)
-                    input_blurry_2 = gaussian_filter(input_image[:, :, 2], sigma=2)
-                    input_images_blurry[count, :, :, 0] = input_blurry_0
-                    input_images_blurry[count, :, :, 1] = input_blurry_1
-                    input_images_blurry[count, :, :, 2] = input_blurry_2
+        _, items_faces_blurry = dataset.get_items_blurry()
 
-                    # input_image = Image.open(face_blurry)
-                    # input_image = np.asarray(input_image, dtype=float)
-                    # input_images_blurry[count] = input_image
-                    # count += 1
+        for i, face_blurry in enumerate(items_faces_blurry[0:100]):
+            input_image = Image.open(face_blurry)
+            input_image = np.asarray(input_image, dtype=float)
 
-                # ##========================= train BEGAN =========================###
-                kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
-                                                    feed_dict={images: input_images,
-                                                               generator_input: input_images_blurry})
-                summary_writer.add_summary(summary_str, total)
-                if iteration % 16 == 0 and iteration > 0:
-                    print("Epoch: %2d Iteration: %2d kt: %.8f Mglobal: %.8f." % (j, iteration, kt, mGlobal))
+            output_image = sess.run(output_gen, feed_dict={generator_input: input_image})[0]
 
-                # ##========================= save checkpoint =========================###
-                if iteration % 3000 == 0 and iteration > 0:
-                    tf.logging.info('Saving checkpoint')
-                    saver.save(sess, args.checkpoint_dir + "/checkpoint", global_step=iteration, write_meta_graph=False)
-                iteration += 1
-                total += 1
-            rest = len(items_faces) - ((iteration - 1) * batch_size)
-            if rest > 0:
-                count = 0
-                input_images = np.empty([rest, 64, 64, 3])
-                input_images_blurry = np.empty([rest, 64, 64, 3])
-                for face, face_blurry in zip(items_faces[len(items_faces) - rest:],
-                                             items_faces_blurry[len(items_faces_blurry) - rest:]):
-                    # Normal images
-                    input_image = Image.open(face)
-                    input_image = np.asarray(input_image, dtype=float)
-                    input_images[count] = input_image
-                    # Blurry images
-                    input_image = Image.open(face_blurry)
-                    input_image = np.asarray(input_image, dtype=float)
-                    input_images_blurry[count] = input_image
-                    count += 1
-                    # ##========================= train BEGAN =========================###
-                kt, mGlobal, summary_str = sess.run([k_update, m_global, summary],
-                                                    feed_dict={images: input_images,
-                                                               generator_input: input_images_blurry})
-                print("Iteration: %2d kt: %.8f Mglobal: %.8f." % (iteration, kt, mGlobal))
-                summary_writer.add_summary(summary_str, iteration)
+            ima = Image.fromarray(output_image.astype(np.uint8), 'RGB')
+            ima.save("test_image_{}.png".format(i))
+
 
 
 if __name__ == '__main__':
@@ -312,5 +204,5 @@ if __name__ == '__main__':
     if not os.path.isdir(os.path.dirname(args.checkpoint_dir)):
         os.mkdir(os.path.dirname(args.checkpoint_dir))
 
-    train(batch_size=1, epochs=10, dataset=DataInput(args.dataset_faces_folder, args.dataset_audios_folder,
+    test(batch_size=1, epochs=10, dataset=DataInput(args.dataset_faces_folder, args.dataset_audios_folder,
                                                       "train"), log_dir=args.log_dir)
