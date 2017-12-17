@@ -19,6 +19,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 from tensorflow.python.client import device_lib
 print device_lib.list_local_devices()
 
+def lrelu1(x, name="lrelu1"):
+    return tf.maximum(x, 0.25*x)
 
 def restore_model(sess, checkpoint_path):
     ckpt = tf.train.get_checkpoint_state(checkpoint_path)
@@ -38,16 +40,16 @@ def generator(input_audio, reuse, hidden_number=64, kernel=3):
         # EXTRACT AUDIO FEATURES
         x = InputLayer(input_audio, name="in_audio_features_extractor") #[batch_size, height, width, 1]
         x = Conv2dLayer(x, shape=[kernel, kernel, 1, 64], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
-                        name='AudioFeatures/conv1')
+                        act=lrelu1, name='AudioFeatures/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, 64, 128], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
-                        name='AudioFeatures/conv2')
+                        act=lrelu1, name='AudioFeatures/conv2')
         # max o avg pool?
         # stride only time axis (ESTA BIEN?)
-        x = PoolLayer(x,strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool1')
+        x = PoolLayer(x, strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool1')
         x = Conv2dLayer(x, shape=[kernel, kernel, 128, 256], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
-                        name='AudioFeatures/conv3')
+                        act=lrelu1, name='AudioFeatures/conv3')
         x = Conv2dLayer(x, shape=[kernel, kernel, 256, 512], strides=[1, 1, 1, 1], padding='SAME', W_init=w_init,
-                        name='AudioFeatures/conv4')
+                        act=lrelu1, name='AudioFeatures/conv4')
         x = PoolLayer(x, strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool2')
         x = FlattenLayer(x, name='AudioFeatures/flatten')
         x = DenseLayer(x, n_units=512, name='AudioFeatures/dense1')
