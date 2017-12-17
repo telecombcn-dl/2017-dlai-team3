@@ -52,8 +52,8 @@ def generator(input_audio, reuse, hidden_number=64, kernel=3):
                         act=lrelu1, name='AudioFeatures/conv4')
         x = PoolLayer(x, strides=[1, 2, 1, 1], pool=tf.nn.avg_pool, name='AudioFeatures/pool2')
         x = FlattenLayer(x, name='AudioFeatures/flatten')
-        x = DenseLayer(x, n_units=512, name='AudioFeatures/dense1')
-        x = DenseLayer(x, n_units=256, name='AudioFeatures/dense2') #[batch_size, 256]
+        x = DenseLayer(x, n_units=512, name='AudioFeatures/dense1', act=lrelu1)
+        x = DenseLayer(x, n_units=256, name='AudioFeatures/dense2', act=lrelu1) #[batch_size, 256]
 
         # DECODER BEGINS
         # hidden_number = n = 128
