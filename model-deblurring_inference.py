@@ -189,10 +189,10 @@ def test(batch_size, epochs, dataset, log_dir):
 
             output_image = sess.run(output_gen, feed_dict={generator_input: input_images_blurry})[0]
 
-            ima = Image.fromarray(output_image.astype(np.uint8), 'RGB')
-            ima.save("test_image_{}.png".format(i))
-            ima = Image.fromarray(input_image.astype(np.uint8), 'RGB')
-            ima.save("input_image_{}.png".format(i))
+            #ima = Image.fromarray(output_image.astype(np.uint8), 'RGB')
+            #ima.save("test_image_{}.png".format(i))
+            #ima = Image.fromarray(input_image.astype(np.uint8), 'RGB')
+            #ima.save("input_image_{}.png".format(i))
 
 
 if __name__ == '__main__':

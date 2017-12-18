@@ -34,7 +34,7 @@ def restore_model(sess, checkpoint_path):
 def generator(input_audio, reuse, hidden_number=64, kernel=3):
     w_init = tf.random_normal_initializer(stddev=0.02)
 
-    with tf.variable_scope("generator", reuse=reuse):
+    with tf.variable_scope("generator_MSE", reuse=reuse):
         tl.layers.set_name_reuse(reuse)
 
         # EXTRACT AUDIO FEATURES
@@ -61,34 +61,34 @@ def generator(input_audio, reuse, hidden_number=64, kernel=3):
         # Each layer is repeated a number of times (typically 2). We observed that more repetitions led to
         # even better visual results
         # Down-sampling is implemented as sub-sampling with stride 2 and up- sampling is done by nearest neighbor.
-        x = DenseLayer(x, n_units=8*8*hidden_number, name='Generator/dense2')
-        arguments = {'shape': [-1, 8, 8, hidden_number], 'name': 'Generator/reshape1'}
+        x = DenseLayer(x, n_units=8*8*hidden_number, name='Generator_MSE/dense2')
+        arguments = {'shape': [-1, 8, 8, hidden_number], 'name': 'Generator_MSE/reshape1'}
         x = LambdaLayer(x, fn=tf.reshape, fn_args=arguments)
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1,1,1,1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv1')
+                        W_init=w_init, act=tf.nn.elu,name='Generator_MSE/conv1')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv2')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling1') # method= 1 NN
+                        W_init=w_init, act=tf.nn.elu,name='Generator_MSE/conv2')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator_MSE/UpSampling1') # method= 1 NN
 
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv3')
+                        W_init=w_init, act=tf.nn.elu,name='Generator_MSE/conv3')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Generator/conv4')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Encoder/UpSampling2')  # method= 1 NN
+                        W_init=w_init, act=tf.nn.elu, name='Generator_MSE/conv4')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Encoder_MSE/UpSampling2')  # method= 1 NN
 
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv5')
+                        W_init=w_init, act=tf.nn.elu,name='Generator_MSE/conv5')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu,name='Generator/conv6')
-        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator/UpSampling3')  # method= 1 NN
+                        W_init=w_init, act=tf.nn.elu,name='Generator_MSE/conv6')
+        x = UpSampling2dLayer(x, size=[2, 2], is_scale=True, method=1, name='Generator_MSE/UpSampling3')  # method= 1 NN
 
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1],
                         padding='SAME',
-                        W_init=w_init,act=tf.nn.elu, name='Generator/conv7')
+                        W_init=w_init,act=tf.nn.elu, name='Generator_MSE/conv7')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, hidden_number], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, act=tf.nn.elu, name='Generator/conv8')
+                        W_init=w_init, act=tf.nn.elu, name='Generator_MSE/conv8')
         x = Conv2dLayer(x, shape=[kernel, kernel, hidden_number, 3], strides=[1, 1, 1, 1], padding='SAME',
-                        W_init=w_init, name='Generator/convLAST')
+                        W_init=w_init, name='Generator_MSE/convLAST')
 
         return x
 
