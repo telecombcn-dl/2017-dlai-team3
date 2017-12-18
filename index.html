@@ -225,7 +225,7 @@
 				<h2>Final approach: Audio2Faces</h2>
 			</header>
 			<div class="container">
-				<center><img src="images/trumpGIF.gif" alt="" height="64" width="64" /></center>
+				<div align="center"><img src="images/trumpGIF.gif" alt="" height="64" width="64" /></center></div>
 				<p>As any of the solutions that we have been trying were able to overcome the Mode Collapase situation, we had to rethink the idea. For that reason, our final solution was a totally different approach from our initial one.</p>
 				<p> The Audio2Faces method consists on training two different networks:</p>
 				<p>The first network is a Convolutional Neural Network trained using a MSE loss. Using a MSE loss produces blurry images, because the output provided is the mean of all the different possibilities of a position of a face. Due to that, if we train the network with a dataset with faces looking to the right and to the left, the output provided looks like a mix of two faces, each one looking to a different direction. So our first task was to process the dataset to flip all faces looking to the right. For doing that, we compare the histogram of the left part of the image with a mean of histograms, in the same position, of faces correctly positioned. We set a threshold of similarity, and when the distance between histograms was higher than the threshold, the images were flipped.</p>
