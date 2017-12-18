@@ -217,16 +217,19 @@
 
 						</section>
 					</div>
-					<div class="4u">
-						<h2>Final approach: Audio2Faces</h2>
-						<section>
-							<p>As any of the solutions that we have been trying were able to overcome the Mode Collapase situation, we had to rethink the idea. For that reason, our final solution was a totally different approach from our initial one.
-							The Audio2Faces method consists on training two different networks:
-							The first network is a Convolutional Neural Network trained using a MSE loss. Using a MSE loss produces blurry images, because the output provided is the mean of all the different possibilities of a position of a face. Due to that, if we train the network with a dataset with faces looking to the right and to the left, the output provided looks like a mix of two faces, each one looking to a different direction. So our first task was to process the dataset to flip all faces looking to the right. For doing that, we compare the histogram of the left part of the image with a mean of histograms, in the same position, of faces correctly positioned. We set a threshold of similarity, and when the distance between histograms was higher than the threshold, the images were flipped.
-							In order to sharpened the images and made them more realistic, we introduced a modification of the BEGAN architecture. Taking advantage of the realism and high quality faces provided by this network, we modified the architecture of the generator to be able to have as an input the blurry face predicted by the first CNN. By using skip connections that helps data flow and preserves information of previous layers, we output a better representation (in terms of realism of images) of the input image. </p>
-						</section>
-					</div>
 				</div>
+			</div>
+		</section>
+		
+		<section id="Final approach: Audio2Faces" class="wrapper style1">
+			<div class="container">
+				<p>As any of the solutions that we have been trying were able to overcome the Mode Collapase situation, we had to rethink the idea. For that reason, our final solution was a totally different approach from our initial one.
+							The Audio2Faces method consists on training two different networks:
+								
+							The first network is a Convolutional Neural Network trained using a MSE loss. Using a MSE loss produces blurry images, because the output provided is the mean of all the different possibilities of a position of a face. Due to that, if we train the network with a dataset with faces looking to the right and to the left, the output provided looks like a mix of two faces, each one looking to a different direction. So our first task was to process the dataset to flip all faces looking to the right. For doing that, we compare the histogram of the left part of the image with a mean of histograms, in the same position, of faces correctly positioned. We set a threshold of similarity, and when the distance between histograms was higher than the threshold, the images were flipped.
+							
+							In order to sharpened the images and made them more realistic, as second network we introduced a modification of the BEGAN architecture. Taking advantage of the realism and high quality faces provided by this network, we modified the architecture of the generator to be able to have as an input the blurry face predicted by the first CNN. By using skip connections that helps data flow and preserves information of previous layers, we output a better representation (in terms of realism of images) of the input image. 
+				</p>
 			</div>
 		</section>
 		
