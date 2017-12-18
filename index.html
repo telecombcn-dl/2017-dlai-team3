@@ -153,9 +153,9 @@
 				<div class="row">
 					<div class="6u">
 						<section>
-							<h2>BEGAN</h2>
+							<h2>First approach: BEGAN Architecture</h2>
 							<a class="image fit"><img src="images/1.png" alt="" /></a>
-							<p> The architecture proposed in the [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf) is quite different to the general way of building GANs. In this case, we have that the architecture used for the Discriminator network is an autoencoder, while the Generator has only the decoder part. In order to conditioned the Generator network to generate talking faces according to an audio segment, we input to the generator audio features instead of a random noise. Those features have been extracted from a CNN which had as an input the audio segment. This CNN is composed by: Conv (3x3,64) + Conv (3x3,128) + Pool(2)  + Conv (3x3,256) + Conv (3x3,512) + Dense(512) + Dense (256).</p>
+							<p> The architecture proposed in the [Boundary Equilibrium Generative Adversarial Network (BEGAN)](https://arxiv.org/pdf/1703.10717.pdf) is quite different to the general way of building GANs. In this case, we have that the architecture used for the Discriminator network is an autoencoder, while the Generator has only the decoder part. In order to conditioned the Generator network to generate talking faces according to an audio segment, our first approach to solve the problem was to input to the generator audio features instead of a random noise. Those features have been extracted from a CNN which had as an input the audio segment. This CNN is composed by: Conv (3x3,64) + Conv (3x3,128) + Pool(2)  + Conv (3x3,256) + Conv (3x3,512) + Dense(512) + Dense (256).</p>
 						</section>
 					</div>
 					<div class="6u">
@@ -215,6 +215,18 @@
 								<a class="image fit"><img src="images/solution4.png" alt="" /></a>
 								<p> We tried to reduce even more the learning rate and we applied a batch size of just one image. During training we were able to observe images from both videos used in the dataset. In previous trainings we were able to generate an image that looked like just one of the videos. But, finally, at test time we could just generate the same image. </p>
 
+						</section>
+					</div>
+					<div class="4u">
+						<h2>Final approach: Audio2Faces</h2>
+						<section>
+							<a class="image fit"><img src="images/7.png" alt="" /></a>
+							<a class="image fit"><img src="images/8.png" alt="" /></a>
+							<a class="image fit"><img src="images/output_XxVvWq.gif" alt="" /></a>
+							<p>As any of the solutions that we have been trying were able to overcome the Mode Collapase situation, we had to rethink the idea. For that reason, our final solution was a totally different approach from our initial one.
+							The Audio2Faces method consists on training two different networks:
+							The first network is a Convolutional Neural Network trained using a MSE loss. Using a MSE loss produces blurry images, because the output provided is the mean of all the different possibilities of a position of a face. Due to that, if we train the network with a dataset with faces looking to the right and to the left, the output provided looks like a mix of two faces, each one looking to a different direction. So our first task was to process the dataset to flip all faces looking to the right. For doing that, we compare the histogram of the left part of the image with a mean of histograms, in the same position, of faces correctly positioned. We set a threshold of similarity, and when the distance between histograms was higher than the threshold, the images were flipped.
+							In order to sharpened the images and made them more realistic, we introduced a modification of the BEGAN architecture. Taking advantage of the realism and high quality faces provided by this network, we modified the architecture of the generator to be able to have as an input the blurry face predicted by the first CNN. By using skip connections that helps data flow and preserves information of previous layers, we output a better representation (in terms of realism of images) of the input image. </p>
 						</section>
 					</div>
 				</div>
